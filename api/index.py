@@ -1,4 +1,58 @@
-import os
+from http.server import BaseHTTPRequestHandler
+from urllib.parse import urlparse
+import json
+
+# === ADD THIS CLASS (or merge with your existing handler) ===
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        path = urlparse(self.path).path
+
+        # === SERVE API DOCS AT /apidocs/ ===
+        if path in ["/apidocs", "/apidocs/"]:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            docs_html = """
+            <h1>Savrli AI - API Documentation</h1>
+            <p><strong>POST /</strong> → Send JSON with <code>prompt</code></p>
+            <pre>{
+  "prompt": "Hello, AI!"
+}</pre>
+            <p><a href="/openapi.json">View OpenAPI Spec</a></p>
+            """
+            self.wfile.write(docs_html.encode())
+            return
+
+        # === SERVE OpenAPI JSON ===
+        if path == "/openapi.json":
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            openapi = {
+                "openapi": "3.0.0",
+                "info": {"title": "Savrli AI", "version": "1.0"},
+                "paths": {
+                    "/": {
+                        "post": {
+                            "requestBody": {
+                                "content": {"application/json": {"schema": {"type": "object", "properties": {"prompt": {"type": "string"}}}}}
+                            },
+                            "responses": {"200": {"description": "AI Response"}}
+                        }
+                    }
+                }
+            }
+            self.wfile.write(json.dumps(openapi).encode())
+            return
+
+        # === FALLBACK: Let your AI handle everything else ===
+        # ←←← YOUR EXISTING AI CODE GOES HERE ←←←
+        # Example placeholder (replace with your real AI):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        response = {"response": "Hello from Savrli AI! (Your AI will replace this)"}
+        self.wfile.write(json.dumps(response).encode())import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flasgger import Swagger
