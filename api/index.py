@@ -1,115 +1,87 @@
-import os
 from flask import Flask, request, jsonify
 from flasgger import Swagger, swag_from
-
-# Optional: OpenAI (will only be used if SERVER_API_KEY is present)
-try:
-    from openai import OpenAI
-except Exception:
-    OpenAI = None
+from flask_cors import CORS
+import os
+from openai import OpenAI
 
 app = Flask(__name__)
+CORS(app)
 
-# ---- Swagger UI config ----
-swagger = Swagger(app, template={
-    "swagger": "2.0",
-    "info": {
-        "title": "Savrli AI API",
-        "description": "Endpoints for Savrli AI. Use **/apidocs** to test.",
-        "version": "1.0.0"
-    },
-    "basePath": "/",
-    "schemes": ["https", "http"]
-})
+# Swagger configuration
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": "apispec",
+            "route": "/apispec.json",
+            "rule_filter": lambda rule: True,
+            "model_filter": lambda tag: True,
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/apidocs/"
+}
+
+swagger = Swagger(app, config=swagger_config)
+
+# Load OpenAI client
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 @app.route("/", methods=["GET"])
-def health():
-    """Health check
-    ---
-    tags:
-      - System
-    responses:
-      200:
-        description: OK
-        schema:
-          type: object
-          properties:
-            ok:
-              type: boolean
-            service:
-              type: string
-    """
+def home():
     return jsonify({"ok": True, "service": "savrli-ai"})
 
-@app.route("/ai/chat", methods=["POST"])
+
 @swag_from({
-    "tags": ["AI"],
-    "consumes": ["application/json"],
-    "produces": ["application/json"],
+    "tags": ["Chat"],
+    "summary": "Ask Kai AI",
+    "description": "Send a message to Savrli AI and get a response.",
     "parameters": [
         {
-            "in": "body",
             "name": "body",
+            "in": "body",
             "required": True,
             "schema": {
                 "type": "object",
                 "properties": {
-                    "message": {"type": "string", "example": "Hello, can you help me plan a date in Santa Monica?"},
-                    "system": {"type": "string", "example": "You are Kai, Savrli's helpful dining assistant."}
+                    "message": {"type": "string", "example": "Hello Kai!"}
                 },
                 "required": ["message"]
             }
         }
     ],
     "responses": {
-        "200": {
+        200: {
             "description": "AI response",
             "schema": {
                 "type": "object",
-                "properties": {
-                    "reply": {"type": "string"}
-                }
+                "properties": {"response": {"type": "string"}}
             }
-        },
-        "400": {"description": "Bad request / missing key"},
-        "500": {"description": "Server error"}
+        }
     }
 })
-def ai_chat():
-    data = request.get_json(silent=True) or {}
-    message = (data.get("message") or "").strip()
-    system = data.get("system") or "You are a concise, helpful assistant."
+@app.route("/ai/chat", methods=["POST"])
+def chat():
+    data = request.get_json()
+    user_message = data.get("message")
 
-    if not message:
-        return jsonify({"error": "message is required"}), 400
-
-    api_key = os.getenv("SERVER_API_KEY") or os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        # Still return something helpful if key isn't set yet
-        return jsonify({"reply": f"(mock) You said: {message}"}), 200
-
-    if OpenAI is None:
-        return jsonify({"error": "OpenAI SDK not installed"}), 500
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
 
     try:
-        client = OpenAI(api_key=api_key)
-
-        # Using the Responses API (OpenAI Python SDK v1+)
-        resp = client.responses.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
-            input=f"{system}\n\nUser: {message}"
+            messages=[{"role": "user", "content": user_message}]
         )
-        reply = resp.output_text or ""
 
-        return jsonify({"reply": reply}), 200
+        ai_reply = response.choices[0].message["content"]
+        return jsonify({"response": ai_reply})
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# Vercel entrypoint
-def handler(request, *args, **kwargs):
-    return app.wsgi_app(request.environ, start_response=None)
-
 if __name__ == "__main__":
-    # Local dev (Vercel won’t use this block)
-    app.run(host="0.0.0.0", port=3000)
+    app.run()
