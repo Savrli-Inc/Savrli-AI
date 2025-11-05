@@ -8,7 +8,12 @@ try:
 except Exception:
     OpenAI = None  # Will error gracefully at runtime
 
-app = FastAPI(title="Savrli AI Chat Endpoint")
+app = FastAPI(
+    title="Savrli AI Chat Endpoint",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
+)
 
 app.add_middleware(
     CORSMiddleware,
