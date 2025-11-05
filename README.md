@@ -1,6 +1,6 @@
 ---
-
 # **Savrli AI Chat Endpoint**
+---
 
 A stateless FastAPI microservice that exposes an `/ai/chat` endpoint to generate conversational recommendations using OpenAI’s GPT-3.5-Turbo model.
 It’s designed for use with the **Savrli app**, deployed on **Vercel** at:
