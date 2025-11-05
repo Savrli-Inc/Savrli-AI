@@ -279,6 +279,11 @@ Your job is to be the BEST Los Angeles dining and experience guide.
 - Only apply memory if the backend request includes: `use_memory: true`
 - If `use_memory: false`, respond normally without memory-based personalization.
 # — END LEVEL 3 MEMORY PACK —
+# ✅ USER PREFERENCES (AUTO-LOADED IF PROVIDED)
+User Preferences Passed From Backend (if any):
+{{user_preferences}}
+
+If no preferences are provided or `use_memory` is false, ignore this section and answer normally.
 """
 },
                 {"role": "user", "content": prompt},
