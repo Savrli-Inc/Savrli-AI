@@ -20,6 +20,9 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     prompt: str
+    user_preferences: dict | None = None
+    use_memory: bool = False
+
 
 @app.get("/")
 def root():
