@@ -1,58 +1,9 @@
-from http.server import BaseHTTPRequestHandler
-from urllib.parse import urlparse
+# api/index.py
+import os
 import json
+from urllib.parse import urlparse
+from http.server import BaseHTTPRequestHandler
 
-# === ADD THIS CLASS (or merge with your existing handler) ===
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        path = urlparse(self.path).path
-
-        # === SERVE API DOCS AT /apidocs/ ===
-        if path in ["/apidocs", "/apidocs/"]:
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            docs_html = """
-            <h1>Savrli AI - API Documentation</h1>
-            <p><strong>POST /</strong> → Send JSON with <code>prompt</code></p>
-            <pre>{
-  "prompt": "Hello, AI!"
-}</pre>
-            <p><a href="/openapi.json">View OpenAPI Spec</a></p>
-            """
-            self.wfile.write(docs_html.encode())
-            return
-
-        # === SERVE OpenAPI JSON ===
-        if path == "/openapi.json":
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            openapi = {
-                "openapi": "3.0.0",
-                "info": {"title": "Savrli AI", "version": "1.0"},
-                "paths": {
-                    "/": {
-                        "post": {
-                            "requestBody": {
-                                "content": {"application/json": {"schema": {"type": "object", "properties": {"prompt": {"type": "string"}}}}}
-                            },
-                            "responses": {"200": {"description": "AI Response"}}
-                        }
-                    }
-                }
-            }
-            self.wfile.write(json.dumps(openapi).encode())
-            return
-
-        # === FALLBACK: Let your AI handle everything else ===
-        # ←←← YOUR EXISTING AI CODE GOES HERE ←←←
-        # Example placeholder (replace with your real AI):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        response = {"response": "Hello from Savrli AI! (Your AI will replace this)"}
-        self.wfile.write(json.dumps(response).encode())import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flasgger import Swagger
@@ -60,10 +11,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Prefer your server key; fall back to OPENAI_API_KEY if set
+# ----------------------------------------------------------------------
+# 1. Your existing Flask app (unchanged)
+# ----------------------------------------------------------------------
 OPENAI_KEY = os.getenv("SERVER_API_KEY") or os.getenv("OPENAI_API_KEY")
 
-# Lazy import so build works even if lib version changes
 try:
     from openai import OpenAI
     client = OpenAI(api_key=OPENAI_KEY) if OPENAI_KEY else None
@@ -91,6 +43,7 @@ def health():
         description: OK
     """
     return jsonify(ok=True, service="savrli-ai")
+
 
 @app.route("/ai/chat", methods=["POST"])
 def ai_chat():
@@ -127,9 +80,7 @@ def ai_chat():
         return jsonify(error="`message` is required"), 400
     if not client:
         return jsonify(error="OpenAI client not configured on server"), 500
-
     try:
-        # Use a lightweight model; adjust as you like
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -144,6 +95,36 @@ def ai_chat():
     except Exception as e:
         return jsonify(error=str(e)), 500
 
-# Vercel entrypoint
+
+# ----------------------------------------------------------------------
+# 2. NEW: Serve /apidocs/ (HTML) and /openapi.json (OpenAPI spec)
+# ----------------------------------------------------------------------
+@app.route("/apidocs", methods=["GET"])
+@app.route("/apidocs/", methods=["GET"])
+def apidocs():
+    html = """
+    <h1>Savrli AI - API Documentation</h1>
+    <p>Use the interactive Swagger UI below or <a href="/swagger.json">download the OpenAPI spec</a>.</p>
+    <div id="swagger"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+    <script>
+      SwaggerUIBundle({ url: '/swagger.json', dom_id: '#swagger' });
+    </script>
+    """
+    return html, 200, {'Content-Type': 'text/html'}
+
+
+@app.route("/openapi.json", methods=["GET"])
+@app.route("/swagger.json", methods=["GET"])
+def openapi_spec():
+    # Flasgger already builds the spec – just return it
+    return jsonify(swagger.get_spec()), 200, {'Content-Type': 'application/json'}
+
+
+# ----------------------------------------------------------------------
+# 3. Vercel serverless entrypoint (unchanged)
+# ----------------------------------------------------------------------
 def handler(event, context):
+    # Vercel expects a WSGI-compatible callable – Flask provides one via `app`
     return app
