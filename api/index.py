@@ -22,23 +22,22 @@ class ChatRequest(BaseModel):
 @app.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
     if not request.prompt.strip():
-        raise HTTPException(status_code=400, detail="Prompt cannot be empty")
-    
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
+
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant providing conversational recommendations."},
                 {"role": "user", "content": request.prompt}
-            ],
-            max_tokens=2000,
-            temperature=0.7
+            ]
         )
-        ai_response = response.choices[0].message.content.strip()
-        return {"response": ai_response}
+        reply = response.choices[0].message["content"]
+        return {"response": reply}
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI temporarily unavailable")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/")
-async def root():
-    return {"message": "Savrli AI Chat API is running!"}
+def root():
+    return {"message": "Savrli AI is running!"}
