@@ -1,6 +1,6 @@
 flask==3.0.3
 openai==1.45.0
 python-dotenv==1.0.1
-flasgger==0.9.7
+flasgger
 flask-cors==4.0.0
-pyyaml==6.0.2
+PyYAML==6.0.2
