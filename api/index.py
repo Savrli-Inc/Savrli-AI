@@ -1,34 +1,43 @@
 import os
 from flask import Flask, request, jsonify
-from openai import OpenAI
 
 app = Flask(__name__)
 
-OPENAI_KEY = os.getenv("SERVER_API_KEY") or os.getenv("OPENAI_API_KEY")
-if not OPENAI_KEY:
-    raise RuntimeError("Missing SERVER_API_KEY or OPENAI_API_KEY")
-
-client = OpenAI(api_key=OPENAI_KEY)
-
+# --- Health check so visiting the root never crashes ---
 @app.get("/")
 def health():
-    return {"ok": True, "service": "savrli-ai"}
+    return jsonify({"ok": True, "service": "savrli-ai"}), 200
 
+# --- Chat endpoint (POST) ---
 @app.post("/ai/chat")
-def ai_chat():
+def chat():
+    # Require server key header so random traffic can't hit OpenAI
+    server_key = os.getenv("SERVER_API_KEY")
+    if not server_key:
+        return jsonify({"error": "SERVER_API_KEY not configured"}), 500
+
+    header_key = request.headers.get("x-api-key")
+    if header_key != server_key:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    user_msg = (data.get("message") or "").strip()
+    if not user_msg:
+        return jsonify({"error": "message is required"}), 400
+
     try:
-        data = request.get_json() or {}
-        user_msg = (data.get("message") or "").strip()
-
-        if not user_msg:
-            return {"error": "message is required"}, 400
-
-        response = client.responses.create(
-            model="gpt-4.1-mini",
-            input=user_msg
+        # OpenAI SDK v1 style
+        from openai import OpenAI
+        client = OpenAI()  # uses OPENAI_API_KEY from env
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are Kai, a concise and friendly dining assistant."},
+                {"role": "user", "content": user_msg}
+            ]
         )
-
-        return {"reply": response.output_text}
-
+        answer = resp.choices[0].message.content
+        return jsonify({"reply": answer}), 200
     except Exception as e:
-        return {"error": str(e)}, 500
+        # Never crash the process — return the error instead
+        return jsonify({"error": str(e)}), 500
