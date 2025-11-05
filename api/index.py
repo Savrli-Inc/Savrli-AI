@@ -6,6 +6,7 @@ import os
 
 app = FastAPI(title="Savrli AI Chat Endpoint")
 
+# CORS (Allow all for testing)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,6 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ✅ Correct OpenAI client initialization
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class ChatRequest(BaseModel):
@@ -21,22 +23,23 @@ class ChatRequest(BaseModel):
 
 @app.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
-    if not request.prompt.strip():
+    prompt = request.prompt.strip()
+
+    if not prompt:
         raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
 
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": request.prompt}
-            ]
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=150
         )
-        reply = response.choices[0].message["content"]
-        return {"response": reply}
+
+        ai_response = response.choices[0].message["content"].strip()
+        return {"response": ai_response}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+        raise HTTPException(status_code=500, detail=f"AI generation error: {str(e)}")
 
 @app.get("/")
 def root():
