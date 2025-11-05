@@ -5,7 +5,7 @@
 A stateless FastAPI microservice that exposes an `/ai/chat` endpoint to generate conversational recommendations using OpenAI’s GPT-3.5-Turbo model.
 It’s designed for use with the **Savrli app**, deployed on **Vercel** at:
 
-> 🌐 **Base URL:** [https://savrli.vercel.app](https://savrli.vercel.app)
+> 🌐 **Base URL:** Your endpoint
 
 ---
 
@@ -75,7 +75,7 @@ No session or conversation memory is stored — each request is processed indepe
 Use the **staging URL**:
 
 ```bash
-curl -X POST https://savrli.vercel.app/ai/chat \
+curl -X POST https://{base-url}/ai/chat \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Recommend a quick breakfast recipe"}'
 ```
