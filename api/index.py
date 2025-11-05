@@ -11,9 +11,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ----------------------------------------------------------------------
-# 1. Your existing Flask app (unchanged)
-# ----------------------------------------------------------------------
 OPENAI_KEY = os.getenv("SERVER_API_KEY") or os.getenv("OPENAI_API_KEY")
 
 try:
@@ -36,44 +33,10 @@ swagger = Swagger(app, template={
 
 @app.route("/", methods=["GET"])
 def health():
-    """Health check endpoint
-    ---
-    responses:
-      200:
-        description: OK
-    """
     return jsonify(ok=True, service="savrli-ai")
-
 
 @app.route("/ai/chat", methods=["POST"])
 def ai_chat():
-    """Send a message to Savrli AI
-    ---
-    consumes:
-      - application/json
-    parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: object
-          properties:
-            message:
-              type: string
-              example: "Plan me a fun dinner in Santa Monica"
-    responses:
-      200:
-        description: AI response
-        schema:
-          type: object
-          properties:
-            reply:
-              type: string
-      400:
-        description: Bad request
-      500:
-        description: Server error
-    """
     data = request.get_json(silent=True) or {}
     msg = (data.get("message") or "").strip()
     if not msg:
@@ -95,10 +58,6 @@ def ai_chat():
     except Exception as e:
         return jsonify(error=str(e)), 500
 
-
-# ----------------------------------------------------------------------
-# 2. NEW: Serve /apidocs/ (HTML) and /openapi.json (OpenAPI spec)
-# ----------------------------------------------------------------------
 @app.route("/apidocs", methods=["GET"])
 @app.route("/apidocs/", methods=["GET"])
 def apidocs():
@@ -114,17 +73,10 @@ def apidocs():
     """
     return html, 200, {'Content-Type': 'text/html'}
 
-
 @app.route("/openapi.json", methods=["GET"])
 @app.route("/swagger.json", methods=["GET"])
 def openapi_spec():
-    # Flasgger already builds the spec – just return it
     return jsonify(swagger.get_spec()), 200, {'Content-Type': 'application/json'}
 
-
-# ----------------------------------------------------------------------
-# 3. Vercel serverless entrypoint (unchanged)
-# ----------------------------------------------------------------------
 def handler(event, context):
-    # Vercel expects a WSGI-compatible callable – Flask provides one via `app`
     return app
