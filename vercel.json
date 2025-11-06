@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/**/*.py": {
+    "api/*.py": {
       "runtime": "python3.11"
     }
   },
@@ -12,25 +12,29 @@
     }
   ],
   "routes": [
-  {
-    "src": "/(ai/.*)",
-    "dest": "api/index.py"
-  },
-  {
-    "src": "/openapi.json",
-    "dest": "api/index.py"
-  },
-  {
-    "src": "/docs",
-    "dest": "api/index.py"
-  },
-  {
-    "src": "/docs/.*",
-    "dest": "api/index.py"
-  },
-  {
-    "src": "/",
-    "dest": "api/index.py"
-  }
-]
-
+    {
+      "src": "/ai/.*",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/openapi.json",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/docs",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/docs/.*",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/.*",
+      "dest": "api/index.py"
+    }
+  ]
+}
