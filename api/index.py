@@ -1,118 +1,44 @@
-# api/index.py
-import os
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from openai import OpenAI
-from flasgger import Swagger
+import os
 
-load_dotenv()
+app = FastAPI(title="Savrli AI Chat Endpoint")
 
-OPENAI_KEY = os.getenv("SERVER_API_KEY") or os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_KEY) if OPENAI_KEY else None
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-app = Flask(__name__)
-CORS(app)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# -----------------------
-# ✅ SWAGGER CONFIG
-# -----------------------
-swagger_template = {
-    "swagger": "2.0",
-    "info": {
-        "title": "Savrli AI API",
-        "description": "API documentation for the Savrli AI backend.",
-        "version": "1.0.0"
-    }
-}
+class ChatRequest(BaseModel):
+    prompt: str
 
-swagger_config = {
-    "headers": [],
-    "static_url_path": "/flasgger_static",
-    "swagger_ui": True,
-    "specs": [
-        {
-            "endpoint": "openapi_json",
-            "route": "/openapi.json",   # <- JSON at root
-        }
-    ],
-    "specs_route": "/docs/"            # <- UI at /docs (with slash)
-}
-
-
-Swagger(app, template=swagger_template, config=swagger_config)
-
-
-# -----------------------
-# ✅ HEALTH CHECK
-# -----------------------
-@app.route("/", methods=["GET"])
-def health():
-    return jsonify(ok=True, service="savrli-ai")
-
-
-# -----------------------
-# ✅ AI CHAT ENDPOINT
-# -----------------------
-@app.route("/api/chat", methods=["POST"])
-def ai_chat():
-    """
-    Chat with Savrli AI
-    ---
-    tags:
-      - AI
-    consumes:
-      - application/json
-    parameters:
-      - name: body
-        in: body
-        required: true
-        schema:
-          id: ChatRequest
-          required:
-            - message
-          properties:
-            message:
-              type: string
-              example: "Hello"
-    responses:
-      200:
-        description: AI response
-        schema:
-          id: ChatResponse
-          properties:
-            response:
-              type: string
-    """
-    data = request.get_json(silent=True) or {}
-    msg = (data.get("message") or "").strip()
-
-    if not msg:
-        return jsonify(error="`message` is required"), 400
-
-    if not client:
-        return jsonify(error="OpenAI key missing"), 500
-
+@app.post("/ai/chat")
+async def chat_endpoint(request: ChatRequest):
+    if not request.prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+    
     try:
-        resp = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": msg}]
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant providing conversational recommendations."},
+                {"role": "user", "content": request.prompt}
+            ],
+            max_tokens=2000,
+            temperature=0.7
         )
-
-        ai_reply = resp.choices[0].message["content"]
-
-        return jsonify(response=ai_reply)
-
+        ai_response = response.choices[0].message.content.strip()
+        return {"response": ai_response}
     except Exception as e:
-        return jsonify(error=str(e)), 500
+        raise HTTPException(status_code=500, detail=f"AI temporarily unavailable")
 
-
-# -----------------------
-# ✅ NECESSARY FOR VERCEL
-# -----------------------
-def handler(request, *args, **kwargs):
-    return app(request, *args, **kwargs)
-
-
-if __name__ == "__main__":
-    app.run()
+@app.get("/")
+async def root():
+    return {"message": "Savrli AI Chat API is running!"}
