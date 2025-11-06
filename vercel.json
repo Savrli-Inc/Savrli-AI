@@ -1,23 +1,20 @@
 {
   "version": 2,
-  "functions": {
-    "api/index.py": {
-      "runtime": "python3.11",
-      "memory": 2048,
-      "maxDuration": 30
-    }
-  },
   "builds": [
     {
       "src": "api/index.py",
       "use": "@vercel/python"
     }
   ],
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3.11"
+    }
+  },
   "routes": [
-    { "src": "/ai/chat", "dest": "api/index.py" },
-    { "src": "/openapi.json", "dest": "api/index.py" },
-    { "src": "/health", "dest": "api/index.py" },
-    { "src": "/docs", "dest": "api/index.py" },
-    { "src": "/docs/.*", "dest": "api/index.py" }
+    { "src": "/ai/chat", "dest": "/api/index.py" },
+    { "src": "/openai.json", "dest": "/api/index.py" },
+    { "src": "/health", "dest": "/api/index.py" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
