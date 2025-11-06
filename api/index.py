@@ -107,3 +107,25 @@ async def chat_endpoint(request: ChatRequest):
     except Exception as e:
         raise HTTPException(500, "AI unavailable")
         
+def mock_restaurant_lookup(name: str, city: str = "Los Angeles"):
+    data = {
+        "The Rooftop at The Standard": {
+            "vibe": "Sunset golden hour, chill house music, packed but fun",
+            "crowd": "25–35, stylish, great for dates",
+            "price": "$$$",
+            "open_now": True,
+            "live": "DJ tonight 8PM"
+        },
+        "Taco Truck on 6th": {
+            "vibe": "Street energy, spicy al pastor, neon lights",
+            "crowd": "Locals, quick bites",
+            "price": "$",
+            "open_now": True
+        }
+    }.get(name, {
+        "vibe": "Cozy, warm lighting, great wine list",
+        "crowd": "Mixed, intimate",
+        "price": "$$",
+        "open_now": True
+    })
+    return data
