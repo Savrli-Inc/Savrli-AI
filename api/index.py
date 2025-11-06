@@ -33,11 +33,12 @@ swagger_config = {
     "specs": [
         {
             "endpoint": "openapi_json",
-            "route": "/api/openapi.json",
+            "route": "/openapi.json",   # <- JSON at root
         }
     ],
-    "specs_route": "/api/docs/"
+    "specs_route": "/docs/"            # <- UI at /docs (with slash)
 }
+
 
 Swagger(app, template=swagger_template, config=swagger_config)
 
