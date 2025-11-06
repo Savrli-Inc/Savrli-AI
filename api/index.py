@@ -1,13 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from openai import OpenAI
 import os
-
 from collections import defaultdict, deque
 import uuid
 import json
-from typing import List
 
 app = FastAPI(title="Savrli AI Chat Endpoint")
 
@@ -21,10 +19,12 @@ app.add_middleware(
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-CHAT_HISTORY = defaultdict(lambda: deque(maxlen=10))  # last 10 messages (5 user + 5 AI)
+# Memory: keeps last 10 messages per session (5 user + 5 AI)
+CHAT_HISTORY = defaultdict(lambda: deque(maxlen=10))
 
 class ChatRequest(BaseModel):
     prompt: str
+    model_extra: dict | None = None  # used to pass session_id from frontend
 
 @app.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
@@ -32,12 +32,14 @@ async def chat_endpoint(request: ChatRequest):
     if not prompt:
         raise HTTPException(400, "Prompt required")
 
+    # Get or create session
     session_id = request.model_extra.get("session_id") if request.model_extra else None
     if not session_id:
         session_id = str(uuid.uuid4())
 
     history: deque = CHAT_HISTORY[session_id]
-    
+
+    # Build message list with system prompt + history + new user message
     messages = [
         {
             "role": "system",
@@ -76,6 +78,8 @@ async def chat_endpoint(request: ChatRequest):
         )
 
         msg = response.choices[0].message
+
+        # Handle tool call (mock restaurant lookup)
         if msg.tool_calls:
             tool_call = msg.tool_calls[0]
             if tool_call.function.name == "get_restaurant_vibe":
@@ -99,6 +103,7 @@ async def chat_endpoint(request: ChatRequest):
         else:
             ai_text = msg.content.strip()
 
+        # Save to memory
         history.append({"role": "user", "content": prompt})
         history.append({"role": "assistant", "content": ai_text})
 
@@ -106,7 +111,96 @@ async def chat_endpoint(request: ChatRequest):
 
     except Exception as e:
         raise HTTPException(500, "AI unavailable")
-        
+
+
+@app.get("/ai/chat", response_class=HTMLResponse)
+async def chat_ui():
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Savrli AI</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #0f0f0f; color: #fff; }
+    #chat { max-width: 600px; margin: 0 auto; padding: 1rem; }
+    .msg { margin: 0.5rem 0; padding: 0.75rem 1rem; border-radius: 12px; max-width: 80%; }
+    .user { background: #4a90e2; align-self: flex-end; margin-left: auto; }
+    .ai { background: #333; align-self: flex-start; }
+    .typing { opacity: 0.7; font-style: italic; }
+    #input-area { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    input { flex: 1; padding: 0.75rem; border: 1px solid #444; border-radius: 8px; background: #222; color: #fff; }
+    button { padding: 0.75rem 1.5rem; background: #4a90e2; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    button:hover { background: #357abd; }
+  </style>
+</head>
+<body>
+  <div id="chat">
+    <div id="messages"></div>
+    <div id="input-area">
+      <input type="text" id="input" placeholder="Ask about the vibe..." autocomplete="off" />
+      <button onclick="send()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const messages = document.getElementById('messages');
+    const input = document.getElementById('input');
+
+    function addMessage(text, type) {
+      const div = document.createElement('div');
+      div.className = `msg ${type}`;
+      div.textContent = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function removeTyping() {
+      const typing = document.querySelector('.typing');
+      if (typing) typing.remove();
+    }
+
+    // Load or create session
+    let sessionId = localStorage.getItem('savrli_session') || null;
+
+    async function send() {
+      const prompt = input.value.trim();
+      if (!prompt) return;
+      addMessage(prompt, 'user');
+      input.value = '';
+      addMessage('...', 'ai typing');
+
+      const res = await fetch('/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          prompt,
+          session_id: sessionId  // Send session to backend
+        })
+      });
+      const data = await res.json();
+      sessionId = data.session_id;
+      localStorage.setItem('savrli_session', sessionId);  // Save for next reload
+      removeTyping();
+      addMessage(data.response, 'ai');
+    }
+
+    input.addEventListener('keypress', e => {
+      if (e.key === 'Enter') send();
+    });
+  </script>
+</body>
+</html>
+    """
+
+
+@app.get("/")
+async def root():
+    return {"message": "Savrli AI Chat API is running!"}
+
+
+# Mock real-time restaurant data
 def mock_restaurant_lookup(name: str, city: str = "Los Angeles"):
     data = {
         "The Rooftop at The Standard": {
