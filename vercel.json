@@ -1,15 +1,30 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "web/**",
+      "use": "@vercel/static"
+    }
+  ],
   "functions": {
     "api/index.py": {
-      "runtime": "python3.11"
+      "runtime": "python3.11",
+      "memory": 2048,
+      "maxDuration": 30
     }
   },
   "routes": [
     { "src": "/ai/chat", "dest": "/api/index.py" },
     { "src": "/openai.json", "dest": "/api/index.py" },
-    { "src": "/docs", "dest": "/api/index.py" },
-    { "src": "/docs/(.*)", "dest": "/api/index.py" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/health", "dest": "/api/index.py" },
+
+    // Remove /docs routes if you don't have them in Python
+    // Or keep only if you want a custom page later
+
+    { "src": "/(.*)", "dest": "/web/index.html" }
   ]
 }
