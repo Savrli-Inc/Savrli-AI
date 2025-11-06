@@ -21,10 +21,6 @@
     { "src": "/ai/chat", "dest": "/api/index.py" },
     { "src": "/openai.json", "dest": "/api/index.py" },
     { "src": "/health", "dest": "/api/index.py" },
-
-    // Remove /docs routes if you don't have them in Python
-    // Or keep only if you want a custom page later
-
     { "src": "/(.*)", "dest": "/web/index.html" }
   ]
 }
