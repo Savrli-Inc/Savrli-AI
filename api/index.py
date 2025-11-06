@@ -4,6 +4,11 @@ from pydantic import BaseModel
 from openai import OpenAI
 import os
 
+from collections import defaultdict, deque
+import uuid
+import json
+from typing import List
+
 app = FastAPI(title="Savrli AI Chat Endpoint")
 
 app.add_middleware(
