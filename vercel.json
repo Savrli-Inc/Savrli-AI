@@ -13,10 +13,11 @@
       "maxDuration": 30
     }
   },
-  "rewrites": [
-    { "source": "/ai/chat", "destination": "api/index.py" },
-    { "source": "/health", "destination": "api/index.py" },
-    { "source": "/openai.json", "destination": "api/index.py" },
-    { "source": "/(.*)", "destination": "api/index.py" }
+  "routes": [
+    { "src": "/api/chat", "dest": "/api/index.py" },
+    { "src": "/health", "dest": "/api/index.py" },
+    { "src": "/openapi.json", "dest": "/api/index.py" },
+    { "src": "/docs(.*)", "dest": "/api/index.py" },
+    { "src": "/", "dest": "/api/index.py" }
   ]
 }
