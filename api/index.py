@@ -24,16 +24,14 @@ CHAT_HISTORY = defaultdict(lambda: deque(maxlen=10))
 
 class ChatRequest(BaseModel):
     prompt: str
-    model_extra: dict | None = None  # used to pass session_id from frontend
 
 @app.post("/ai/chat")
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest, session_id: str = None):
     prompt = request.prompt.strip()
     if not prompt:
         raise HTTPException(400, "Prompt required")
 
     # Get or create session
-    session_id = request.model_extra.get("session_id") if request.model_extra else None
     if not session_id:
         session_id = str(uuid.uuid4())
 
@@ -114,7 +112,7 @@ async def chat_endpoint(request: ChatRequest):
 
 
 @app.get("/ai/chat", response_class=HTMLResponse)
-async def chat_ui():
+async def chat_ui(session_id: str = None):
     return """
 <!DOCTYPE html>
 <html lang="en">
@@ -171,12 +169,11 @@ async def chat_ui():
       input.value = '';
       addMessage('...', 'ai typing');
 
-      const res = await fetch('/ai/chat', {
+      const res = await fetch('/ai/chat?session_id=' + sessionId, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          prompt,
-          session_id: sessionId  // Send session to backend
+          prompt
         })
       });
       const data = await res.json();
