@@ -21,6 +21,8 @@ app.add_middleware(
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+CHAT_HISTORY = defaultdict(lambda: deque(maxlen=10))  # last 10 messages (5 user + 5 AI)
+
 class ChatRequest(BaseModel):
     prompt: str
 
