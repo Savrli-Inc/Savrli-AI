@@ -12,9 +12,25 @@
     }
   ],
   "routes": [
-    {
-      "src": "/.*",
-      "dest": "api/index.py"
-    }
-  ]
-}
+  {
+    "src": "/(ai/.*)",
+    "dest": "api/index.py"
+  },
+  {
+    "src": "/openapi.json",
+    "dest": "api/index.py"
+  },
+  {
+    "src": "/docs",
+    "dest": "api/index.py"
+  },
+  {
+    "src": "/docs/.*",
+    "dest": "api/index.py"
+  },
+  {
+    "src": "/",
+    "dest": "api/index.py"
+  }
+]
+
