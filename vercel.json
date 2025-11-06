@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/*.py": {
+    "api/index.py": {
       "runtime": "python3.11"
     }
   },
@@ -13,27 +13,23 @@
   ],
   "routes": [
     {
-      "src": "/ai/.*",
+      "src": "^/ai/chat$",
       "dest": "api/index.py"
     },
     {
-      "src": "/openapi.json",
+      "src": "^/openapi.json$",
       "dest": "api/index.py"
     },
     {
-      "src": "/docs",
+      "src": "^/docs$",
       "dest": "api/index.py"
     },
     {
-      "src": "/docs/.*",
+      "src": "^/docs/.*$",
       "dest": "api/index.py"
     },
     {
-      "src": "/",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/.*",
+      "src": "^/.*$",
       "dest": "api/index.py"
     }
   ]
