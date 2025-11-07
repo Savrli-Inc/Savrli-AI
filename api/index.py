@@ -33,8 +33,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
-    prompt = request.prompt or ""
-    if not prompt.strip():
+    if not request.prompt.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Prompt cannot be empty")
 
     # Apply config and clamp values
@@ -53,7 +52,7 @@ async def chat_endpoint(request: ChatRequest):
                 model=model,
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant providing conversational recommendations."},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": request.prompt}
                 ],
                 max_tokens=max_tokens,
                 temperature=temperature
