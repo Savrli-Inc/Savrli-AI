@@ -62,12 +62,17 @@ async def chat_endpoint(request: ChatRequest):
 
         # Defensive parsing
         choices = getattr(response, "choices", None)
-        if not choices or len(choices) == 0:
+        if not choices or not isinstance(choices, (list, tuple)) or len(choices) == 0:
             logger.error("OpenAI returned no choices: %s", response)
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI returned an empty response")
 
         # Attempt to extract message content in a variety of shapes
-        message = choices[0].get("message") if isinstance(choices[0], dict) else getattr(choices[0], "message", None)
+        first_choice = choices[0]
+        if not first_choice:
+            logger.error("OpenAI returned empty first choice: %s", response)
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Unexpected AI response format")
+            
+        message = first_choice.get("message") if isinstance(first_choice, dict) else getattr(first_choice, "message", None)
         content = None
         if isinstance(message, dict):
             content = message.get("content")
@@ -77,7 +82,7 @@ async def chat_endpoint(request: ChatRequest):
 
         if not content:
             # Fallback: some older SDKs put text in choices[0].text
-            content = choices[0].get("text") if isinstance(choices[0], dict) else getattr(choices[0], "text", None)
+            content = first_choice.get("text") if isinstance(first_choice, dict) else getattr(first_choice, "text", None)
 
         if not content:
             logger.error("Could not parse AI response: %s", response)
