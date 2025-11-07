@@ -17,3 +17,8 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/

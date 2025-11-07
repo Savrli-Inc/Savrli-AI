@@ -25,6 +25,7 @@ try:
     DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
     DEFAULT_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
     DEFAULT_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+    DEFAULT_CONTEXT_WINDOW = int(os.getenv("DEFAULT_CONTEXT_WINDOW", "10"))
 except ValueError as e:
     logger.error("Invalid environment variable value: %s", e)
     raise RuntimeError(f"Invalid environment variable configuration: {e}")
@@ -53,8 +54,16 @@ class ChatRequest(BaseModel):
     max_tokens: Optional[int] = None
     temperature: Optional[float] = None
     model: Optional[str] = None
+    # Advanced OpenAI API parameters
+    top_p: Optional[float] = None
+    frequency_penalty: Optional[float] = None
+    presence_penalty: Optional[float] = None
+    # Custom system instruction
+    system: Optional[str] = None
     # Session management for conversation history
     session_id: Optional[str] = None
+    # Context window (number of previous turns to include)
+    context_window: Optional[int] = None
     # Enable streaming response
     stream: Optional[bool] = False
 
@@ -74,16 +83,39 @@ async def chat_endpoint(request: ChatRequest):
     if temperature < 0.0 or temperature > 2.0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="temperature must be between 0.0 and 2.0")
     
+    # Validate top_p if provided
+    top_p = request.top_p
+    if top_p is not None and (top_p < 0.0 or top_p > 1.0):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="top_p must be between 0.0 and 1.0")
+    
+    # Validate frequency_penalty if provided
+    frequency_penalty = request.frequency_penalty
+    if frequency_penalty is not None and (frequency_penalty < -2.0 or frequency_penalty > 2.0):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="frequency_penalty must be between -2.0 and 2.0")
+    
+    # Validate presence_penalty if provided
+    presence_penalty = request.presence_penalty
+    if presence_penalty is not None and (presence_penalty < -2.0 or presence_penalty > 2.0):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="presence_penalty must be between -2.0 and 2.0")
+    
+    # Validate context_window if provided
+    context_window = request.context_window if request.context_window is not None else DEFAULT_CONTEXT_WINDOW
+    if context_window < 0 or context_window > 50:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="context_window must be between 0 and 50")
+    
     model = request.model if request.model is not None else DEFAULT_MODEL
     session_id = request.session_id if request.session_id else None  # None if not provided
     
+    # Use custom system instruction or default
+    system_message = request.system if request.system else "You are a helpful assistant providing conversational recommendations."
+    
     # Build messages array with conversation history
-    messages = [{"role": "system", "content": "You are a helpful assistant providing conversational recommendations."}]
+    messages = [{"role": "system", "content": system_message}]
     
     # Add conversation history if session_id is provided
     if session_id in conversation_history:
-        # Add recent history (limit to avoid token overflow)
-        recent_history = conversation_history[session_id][-10:]  # Last 10 messages
+        # Add recent history (use configurable context_window)
+        recent_history = conversation_history[session_id][-context_window:] if context_window > 0 else []
         messages.extend([{"role": msg["role"], "content": msg["content"]} for msg in recent_history])
     
     # Add current user message
@@ -102,12 +134,12 @@ async def chat_endpoint(request: ChatRequest):
         # Handle streaming vs non-streaming responses
         if request.stream:
             return StreamingResponse(
-                stream_openai_response(model, messages, max_tokens, temperature, session_id),
+                stream_openai_response(model, messages, max_tokens, temperature, top_p, frequency_penalty, presence_penalty, session_id),
                 media_type="text/event-stream"
             )
         else:
             # Non-streaming response (original behavior with history support)
-            return await get_complete_response(model, messages, max_tokens, temperature, session_id)
+            return await get_complete_response(model, messages, max_tokens, temperature, top_p, frequency_penalty, presence_penalty, session_id)
 
     except HTTPException:
         # Re-raise HTTPExceptions raised above
@@ -118,15 +150,26 @@ async def chat_endpoint(request: ChatRequest):
         # Map to a 503 to indicate an upstream service problem
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="AI temporarily unavailable")
 
-async def get_complete_response(model: str, messages: List[Dict], max_tokens: int, temperature: float, session_id: str):
+async def get_complete_response(model: str, messages: List[Dict], max_tokens: int, temperature: float, 
+                                top_p: Optional[float], frequency_penalty: Optional[float], 
+                                presence_penalty: Optional[float], session_id: str):
     """Get complete non-streaming response"""
     def call_openai():
-        return client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens,
-            temperature=temperature
-        )
+        # Build kwargs with only non-None optional parameters
+        kwargs = {
+            "model": model,
+            "messages": messages,
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        }
+        if top_p is not None:
+            kwargs["top_p"] = top_p
+        if frequency_penalty is not None:
+            kwargs["frequency_penalty"] = frequency_penalty
+        if presence_penalty is not None:
+            kwargs["presence_penalty"] = presence_penalty
+        
+        return client.chat.completions.create(**kwargs)
 
     response = await asyncio.to_thread(call_openai)
 
@@ -175,19 +218,30 @@ async def get_complete_response(model: str, messages: List[Dict], max_tokens: in
     
     return {"response": ai_response, "session_id": session_id}
 
-async def stream_openai_response(model: str, messages: List[Dict], max_tokens: int, temperature: float, session_id: str):
+async def stream_openai_response(model: str, messages: List[Dict], max_tokens: int, temperature: float,
+                                 top_p: Optional[float], frequency_penalty: Optional[float],
+                                 presence_penalty: Optional[float], session_id: str):
     """Stream OpenAI response using Server-Sent Events"""
     full_response = ""
     
     try:
         def create_stream():
-            return client.chat.completions.create(
-                model=model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                stream=True
-            )
+            # Build kwargs with only non-None optional parameters
+            kwargs = {
+                "model": model,
+                "messages": messages,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "stream": True
+            }
+            if top_p is not None:
+                kwargs["top_p"] = top_p
+            if frequency_penalty is not None:
+                kwargs["frequency_penalty"] = frequency_penalty
+            if presence_penalty is not None:
+                kwargs["presence_penalty"] = presence_penalty
+            
+            return client.chat.completions.create(**kwargs)
         
         # Run stream creation in thread to avoid blocking
         stream = await asyncio.to_thread(create_stream)
