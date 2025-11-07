@@ -18,8 +18,17 @@ if not OPENAI_API_KEY:
 
 # Read configurable defaults from env
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
-DEFAULT_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
-DEFAULT_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+try:
+    DEFAULT_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
+except ValueError:
+    logger.error("OPENAI_MAX_TOKENS must be a valid integer. Using default: 1000")
+    DEFAULT_MAX_TOKENS = 1000
+
+try:
+    DEFAULT_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+except ValueError:
+    logger.error("OPENAI_TEMPERATURE must be a valid float. Using default: 0.7")
+    DEFAULT_TEMPERATURE = 0.7
 
 # Create client once
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -46,6 +55,10 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="max_tokens must be between 1 and 2000")
 
     temperature = request.temperature if request.temperature is not None else DEFAULT_TEMPERATURE
+    # Validate temperature bounds
+    if temperature < 0.0 or temperature > 2.0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="temperature must be between 0.0 and 2.0")
+
     model = request.model or DEFAULT_MODEL
 
     try:
@@ -65,12 +78,13 @@ async def chat_endpoint(request: ChatRequest):
 
         # Defensive parsing
         choices = getattr(response, "choices", None)
-        if not choices or len(choices) == 0:
+        if not choices or not isinstance(choices, (list, tuple)) or len(choices) == 0:
             logger.error("OpenAI returned no choices: %s", response)
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI returned an empty response")
 
         # Attempt to extract message content in a variety of shapes
-        message = choices[0].get("message") if isinstance(choices[0], dict) else getattr(choices[0], "message", None)
+        first_choice = choices[0]
+        message = first_choice.get("message") if isinstance(first_choice, dict) else getattr(first_choice, "message", None)
         content = None
         if isinstance(message, dict):
             content = message.get("content")
@@ -79,8 +93,8 @@ async def chat_endpoint(request: ChatRequest):
             content = getattr(message, "content", None)
 
         if not content:
-            # Fallback: some older SDKs put text in choices[0].text
-            content = choices[0].get("text") if isinstance(choices[0], dict) else getattr(choices[0], "text", None)
+            # Fallback: some older SDKs put text in first_choice.text
+            content = first_choice.get("text") if isinstance(first_choice, dict) else getattr(first_choice, "text", None)
 
         if not content:
             logger.error("Could not parse AI response: %s", response)
