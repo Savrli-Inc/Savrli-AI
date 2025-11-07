@@ -17,9 +17,13 @@ if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY environment variable is required")
 
 # Read configurable defaults from env
-DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
-DEFAULT_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
-DEFAULT_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+try:
+    DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+    DEFAULT_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
+    DEFAULT_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+except ValueError as e:
+    logger.error("Invalid environment variable value: %s", e)
+    raise RuntimeError(f"Invalid environment variable configuration: {e}")
 
 # Create client once
 client = OpenAI(api_key=OPENAI_API_KEY)
@@ -43,6 +47,10 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="max_tokens must be between 1 and 2000")
 
     temperature = request.temperature if request.temperature is not None else DEFAULT_TEMPERATURE
+    # Validate temperature bounds
+    if temperature < 0.0 or temperature > 2.0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="temperature must be between 0.0 and 2.0")
+    
     model = request.model if request.model is not None else DEFAULT_MODEL
 
     try:
@@ -88,6 +96,10 @@ async def chat_endpoint(request: ChatRequest):
             logger.error("Could not parse AI response: %s", response)
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Unexpected AI response format")
 
+        # Ensure content is a string
+        if not isinstance(content, str):
+            content = str(content)
+        
         ai_response = content.strip()
         return {"response": ai_response}
 
