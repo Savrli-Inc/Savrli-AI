@@ -63,9 +63,9 @@ async def chat_endpoint(request: ChatRequest):
     model = request.model if request.model is not None else DEFAULT_MODEL
 
     try:
-        # The OpenAI client call may be blocking — run it in a thread to avoid blocking the event loop
-        def call_openai():
-            return client.chat.completions.create(
+        # Run the OpenAI client call in a thread to avoid blocking the event loop
+        response = await asyncio.to_thread(
+            lambda: client.chat.completions.create(
                 model=model,
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant providing conversational recommendations."},
@@ -74,8 +74,7 @@ async def chat_endpoint(request: ChatRequest):
                 max_tokens=max_tokens,
                 temperature=temperature
             )
-
-        response = await asyncio.to_thread(call_openai)
+        )
 
         # Defensive parsing
         if not response.choices or len(response.choices) == 0:
@@ -83,6 +82,7 @@ async def chat_endpoint(request: ChatRequest):
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI returned an empty response")
 
         # Extract message content from the response
+        # Using getattr for defensive access in case of API changes or edge cases
         message = response.choices[0].message
         content = getattr(message, "content", None)
 
