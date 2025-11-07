@@ -37,6 +37,11 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 conversation_history: Dict[str, List[Dict]] = defaultdict(list)
 MAX_HISTORY_PER_SESSION = int(os.getenv("MAX_HISTORY_PER_SESSION", "20"))
 
+def trim_conversation_history(session_id: str):
+    """Trim conversation history to MAX_HISTORY_PER_SESSION messages"""
+    if len(conversation_history[session_id]) > MAX_HISTORY_PER_SESSION:
+        conversation_history[session_id] = conversation_history[session_id][-MAX_HISTORY_PER_SESSION:]
+
 class Message(BaseModel):
     role: str
     content: str
@@ -70,13 +75,13 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="temperature must be between 0.0 and 2.0")
     
     model = request.model if request.model is not None else DEFAULT_MODEL
-    session_id = request.session_id or "default"
+    session_id = request.session_id if request.session_id else None  # None if not provided
     
     # Build messages array with conversation history
     messages = [{"role": "system", "content": "You are a helpful assistant providing conversational recommendations."}]
     
     # Add conversation history if session_id is provided
-    if session_id and session_id in conversation_history:
+    if session_id in conversation_history:
         # Add recent history (limit to avoid token overflow)
         recent_history = conversation_history[session_id][-10:]  # Last 10 messages
         messages.extend([{"role": msg["role"], "content": msg["content"]} for msg in recent_history])
@@ -84,16 +89,14 @@ async def chat_endpoint(request: ChatRequest):
     # Add current user message
     messages.append({"role": "user", "content": request.prompt})
     
-    # Store user message in history
-    conversation_history[session_id].append({
-        "role": "user",
-        "content": request.prompt,
-        "timestamp": datetime.utcnow().isoformat()
-    })
-    
-    # Trim history if too long
-    if len(conversation_history[session_id]) > MAX_HISTORY_PER_SESSION:
-        conversation_history[session_id] = conversation_history[session_id][-MAX_HISTORY_PER_SESSION:]
+    # Store user message in history (only if session_id provided)
+    if session_id:
+        conversation_history[session_id].append({
+            "role": "user",
+            "content": request.prompt,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        trim_conversation_history(session_id)
 
     try:
         # Handle streaming vs non-streaming responses
@@ -161,16 +164,14 @@ async def get_complete_response(model: str, messages: List[Dict], max_tokens: in
     
     ai_response = content.strip()
     
-    # Store assistant response in history
-    conversation_history[session_id].append({
-        "role": "assistant",
-        "content": ai_response,
-        "timestamp": datetime.utcnow().isoformat()
-    })
-    
-    # Trim history if too long
-    if len(conversation_history[session_id]) > MAX_HISTORY_PER_SESSION:
-        conversation_history[session_id] = conversation_history[session_id][-MAX_HISTORY_PER_SESSION:]
+    # Store assistant response in history (only if session_id provided)
+    if session_id:
+        conversation_history[session_id].append({
+            "role": "assistant",
+            "content": ai_response,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        trim_conversation_history(session_id)
     
     return {"response": ai_response, "session_id": session_id}
 
@@ -188,31 +189,37 @@ async def stream_openai_response(model: str, messages: List[Dict], max_tokens: i
                 stream=True
             )
         
+        # Run stream creation in thread to avoid blocking
         stream = await asyncio.to_thread(create_stream)
         
-        for chunk in stream:
-            if hasattr(chunk, 'choices') and len(chunk.choices) > 0:
-                delta = chunk.choices[0].delta
-                if hasattr(delta, 'content') and delta.content:
-                    content = delta.content
-                    full_response += content
-                    # Send SSE formatted data
-                    yield f"data: {json.dumps({'content': content})}\n\n"
+        # Process stream in thread to avoid blocking
+        def process_stream():
+            result = []
+            for chunk in stream:
+                if hasattr(chunk, 'choices') and len(chunk.choices) > 0:
+                    delta = chunk.choices[0].delta
+                    if hasattr(delta, 'content') and delta.content:
+                        result.append(delta.content)
+            return result
+        
+        chunks = await asyncio.to_thread(process_stream)
+        
+        # Yield chunks as SSE
+        for content in chunks:
+            full_response += content
+            yield f"data: {json.dumps({'content': content})}\n\n"
         
         # Send completion marker
         yield f"data: {json.dumps({'done': True})}\n\n"
         
-        # Store complete assistant response in history
-        if full_response:
+        # Store complete assistant response in history (only if session_id provided)
+        if full_response and session_id:
             conversation_history[session_id].append({
                 "role": "assistant",
                 "content": full_response,
                 "timestamp": datetime.utcnow().isoformat()
             })
-            
-            # Trim history if too long
-            if len(conversation_history[session_id]) > MAX_HISTORY_PER_SESSION:
-                conversation_history[session_id] = conversation_history[session_id][-MAX_HISTORY_PER_SESSION:]
+            trim_conversation_history(session_id)
                 
     except Exception as e:
         logger.exception("Error streaming OpenAI response: %s", e)
