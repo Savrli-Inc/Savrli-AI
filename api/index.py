@@ -33,8 +33,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
-    prompt = request.prompt or ""
-    if not prompt.strip():
+    if not request.prompt.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Prompt cannot be empty")
 
     # Apply config and clamp values
@@ -53,7 +52,7 @@ async def chat_endpoint(request: ChatRequest):
                 model=model,
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant providing conversational recommendations."},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": request.prompt}
                 ],
                 max_tokens=max_tokens,
                 temperature=temperature
@@ -62,23 +61,13 @@ async def chat_endpoint(request: ChatRequest):
         response = await asyncio.to_thread(call_openai)
 
         # Defensive parsing
-        choices = getattr(response, "choices", None)
-        if not choices or len(choices) == 0:
+        if not response.choices or len(response.choices) == 0:
             logger.error("OpenAI returned no choices: %s", response)
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI returned an empty response")
 
-        # Attempt to extract message content in a variety of shapes
-        message = choices[0].get("message") if isinstance(choices[0], dict) else getattr(choices[0], "message", None)
-        content = None
-        if isinstance(message, dict):
-            content = message.get("content")
-        elif message is not None:
-            # Some SDK responses expose .content
-            content = getattr(message, "content", None)
-
-        if not content:
-            # Fallback: some older SDKs put text in choices[0].text
-            content = choices[0].get("text") if isinstance(choices[0], dict) else getattr(choices[0], "text", None)
+        # Extract message content from the response
+        message = response.choices[0].message
+        content = getattr(message, "content", None)
 
         if not content:
             logger.error("Could not parse AI response: %s", response)
