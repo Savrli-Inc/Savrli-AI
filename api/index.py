@@ -76,8 +76,8 @@ async def chat_endpoint(request: ChatRequest):
 
         # Attempt to extract message content in a variety of shapes
         first_choice = choices[0]
-        if not first_choice:
-            logger.error("OpenAI returned empty first choice: %s", response)
+        if first_choice is None:
+            logger.error("OpenAI returned None for first choice: %s", response)
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Unexpected AI response format")
             
         message = first_choice.get("message") if isinstance(first_choice, dict) else getattr(first_choice, "message", None)
