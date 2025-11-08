@@ -7,7 +7,7 @@ import asyncio
 import logging
 import json
 from typing import Optional, List, Dict
-from datetime import datetime
+from datetime import datetime, timezone
 from collections import defaultdict
 
 app = FastAPI()
@@ -126,7 +126,7 @@ async def chat_endpoint(request: ChatRequest):
         conversation_history[session_id].append({
             "role": "user",
             "content": request.prompt,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
         trim_conversation_history(session_id)
 
@@ -212,7 +212,7 @@ async def get_complete_response(model: str, messages: List[Dict], max_tokens: in
         conversation_history[session_id].append({
             "role": "assistant",
             "content": ai_response,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         })
         trim_conversation_history(session_id)
     
@@ -271,7 +271,7 @@ async def stream_openai_response(model: str, messages: List[Dict], max_tokens: i
             conversation_history[session_id].append({
                 "role": "assistant",
                 "content": full_response,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             })
             trim_conversation_history(session_id)
                 
