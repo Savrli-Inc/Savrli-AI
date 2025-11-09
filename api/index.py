@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, File, UploadFile
 from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
 from pydantic import BaseModel
 from openai import OpenAI
@@ -6,10 +6,14 @@ import os
 import asyncio
 import logging
 import json
-from typing import Optional, List, Dict
+import base64
+from typing import Optional, List, Dict, Union
 from datetime import datetime, timezone
 from collections import defaultdict
 from pathlib import Path
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from ai_capabilities import AICapability, FineTuningConfig, SupportedModel
 
 app = FastAPI()
 logger = logging.getLogger("api")
@@ -67,6 +71,42 @@ class ChatRequest(BaseModel):
     context_window: Optional[int] = None
     # Enable streaming response
     stream: Optional[bool] = False
+
+class VisionRequest(BaseModel):
+    """Request model for image analysis using vision models"""
+    prompt: str
+    image_url: Optional[str] = None
+    image_base64: Optional[str] = None
+    model: Optional[str] = "gpt-4-vision-preview"
+    max_tokens: Optional[int] = 300
+    detail: Optional[str] = "auto"  # "auto", "low", or "high"
+
+class AudioTranscriptionRequest(BaseModel):
+    """Request model for audio transcription"""
+    model: Optional[str] = "whisper-1"
+    language: Optional[str] = None
+    prompt: Optional[str] = None
+    response_format: Optional[str] = "json"  # json, text, srt, verbose_json, or vtt
+    temperature: Optional[float] = 0.0
+
+class ImageGenerationRequest(BaseModel):
+    """Request model for image generation"""
+    prompt: str
+    model: Optional[str] = "dall-e-3"
+    n: Optional[int] = 1
+    size: Optional[str] = "1024x1024"  # dall-e-3: 1024x1024, 1792x1024, 1024x1792
+    quality: Optional[str] = "standard"  # standard or hd
+    style: Optional[str] = "vivid"  # vivid or natural
+
+class FineTuningRequest(BaseModel):
+    """Request model for fine-tuning configuration"""
+    training_file: str
+    model: Optional[str] = "gpt-3.5-turbo"
+    validation_file: Optional[str] = None
+    n_epochs: Optional[int] = 3
+    batch_size: Optional[str] = "auto"
+    learning_rate_multiplier: Optional[str] = "auto"
+    suffix: Optional[str] = None
 
 @app.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
@@ -303,6 +343,293 @@ async def clear_conversation_history(session_id: str):
         del conversation_history[session_id]
         return {"message": f"History cleared for session {session_id}"}
     return {"message": f"No history found for session {session_id}"}
+
+@app.post("/ai/vision")
+async def vision_endpoint(request: VisionRequest):
+    """
+    Analyze images using GPT-4 Vision or similar models
+    
+    Accepts either an image URL or base64-encoded image data.
+    """
+    if not request.image_url and not request.image_base64:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either image_url or image_base64 must be provided"
+        )
+    
+    if not request.prompt.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Prompt cannot be empty"
+        )
+    
+    try:
+        # Build the message content
+        content = [
+            {"type": "text", "text": request.prompt}
+        ]
+        
+        if request.image_url:
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": request.image_url,
+                    "detail": request.detail
+                }
+            })
+        elif request.image_base64:
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{request.image_base64}",
+                    "detail": request.detail
+                }
+            })
+        
+        messages = [
+            {
+                "role": "user",
+                "content": content
+            }
+        ]
+        
+        def call_openai():
+            return client.chat.completions.create(
+                model=request.model,
+                messages=messages,
+                max_tokens=request.max_tokens
+            )
+        
+        response = await asyncio.to_thread(call_openai)
+        
+        # Extract response
+        if not response.choices or len(response.choices) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="AI returned an empty response"
+            )
+        
+        content = response.choices[0].message.content
+        
+        return {
+            "response": content,
+            "model": request.model,
+            "input_type": "image"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error calling OpenAI Vision API: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Vision API temporarily unavailable"
+        )
+
+@app.post("/ai/audio/transcribe")
+async def transcribe_audio(
+    file: UploadFile = File(...),
+    model: str = "whisper-1",
+    language: Optional[str] = None,
+    prompt: Optional[str] = None,
+    response_format: str = "json",
+    temperature: float = 0.0
+):
+    """
+    Transcribe audio using Whisper API
+    
+    Accepts audio file upload and returns transcription.
+    """
+    try:
+        # Read the uploaded file
+        audio_data = await file.read()
+        
+        # Create a temporary file to pass to OpenAI
+        # OpenAI API requires a file object
+        def call_openai():
+            # Create kwargs with only non-None parameters
+            kwargs = {
+                "model": model,
+                "file": (file.filename, audio_data, file.content_type)
+            }
+            if language:
+                kwargs["language"] = language
+            if prompt:
+                kwargs["prompt"] = prompt
+            if response_format:
+                kwargs["response_format"] = response_format
+            if temperature != 0.0:
+                kwargs["temperature"] = temperature
+            
+            return client.audio.transcriptions.create(**kwargs)
+        
+        result = await asyncio.to_thread(call_openai)
+        
+        # Handle different response formats
+        if response_format == "json" or response_format == "verbose_json":
+            return {
+                "transcription": result.text if hasattr(result, 'text') else str(result),
+                "model": model,
+                "input_type": "audio"
+            }
+        else:
+            # For text, srt, vtt formats, return as plain text
+            return {
+                "transcription": str(result),
+                "model": model,
+                "input_type": "audio",
+                "format": response_format
+            }
+        
+    except Exception as e:
+        logger.exception("Error calling Whisper API: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Audio transcription temporarily unavailable"
+        )
+
+@app.post("/ai/image/generate")
+async def generate_image(request: ImageGenerationRequest):
+    """
+    Generate images using DALL-E models
+    
+    Creates images from text prompts.
+    """
+    if not request.prompt.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Prompt cannot be empty"
+        )
+    
+    # Validate size based on model
+    valid_sizes = {
+        "dall-e-3": ["1024x1024", "1792x1024", "1024x1792"],
+        "dall-e-2": ["256x256", "512x512", "1024x1024"]
+    }
+    
+    if request.size not in valid_sizes.get(request.model, []):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid size for {request.model}. Valid sizes: {', '.join(valid_sizes.get(request.model, []))}"
+        )
+    
+    try:
+        def call_openai():
+            kwargs = {
+                "model": request.model,
+                "prompt": request.prompt,
+                "n": request.n,
+                "size": request.size
+            }
+            
+            # DALL-E 3 specific parameters
+            if request.model == "dall-e-3":
+                kwargs["quality"] = request.quality
+                kwargs["style"] = request.style
+            
+            return client.images.generate(**kwargs)
+        
+        response = await asyncio.to_thread(call_openai)
+        
+        # Extract image URLs
+        images = [
+            {
+                "url": image.url,
+                "revised_prompt": getattr(image, 'revised_prompt', None)
+            }
+            for image in response.data
+        ]
+        
+        return {
+            "images": images,
+            "model": request.model,
+            "count": len(images)
+        }
+        
+    except Exception as e:
+        logger.exception("Error calling DALL-E API: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Image generation temporarily unavailable"
+        )
+
+@app.get("/ai/models")
+async def list_models():
+    """
+    List all supported AI models and their capabilities
+    
+    Returns information about available models for text, image, and audio processing.
+    """
+    capability = AICapability("default", ["text", "image", "audio"])
+    models_info = capability.get_model_info()
+    
+    return {
+        "models": models_info["supported_models"],
+        "total_count": models_info["total_count"],
+        "capabilities": {
+            "text": ["gpt-4", "gpt-4-turbo-preview", "gpt-3.5-turbo"],
+            "image_analysis": ["gpt-4-vision-preview"],
+            "image_generation": ["dall-e-3", "dall-e-2"],
+            "audio": ["whisper-1", "tts-1", "tts-1-hd"]
+        }
+    }
+
+@app.get("/ai/models/{model_name}")
+async def get_model_info(model_name: str):
+    """
+    Get detailed information about a specific model
+    
+    Returns capabilities and configuration options for the specified model.
+    """
+    capability = AICapability("default", ["text", "image", "audio"])
+    model_info = capability.get_model_info(model_name)
+    
+    if model_info.get("status") == "not_found":
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Model {model_name} not found"
+        )
+    
+    return model_info
+
+@app.post("/ai/fine-tune/configure")
+async def configure_fine_tuning(request: FineTuningRequest):
+    """
+    Configure fine-tuning for AI models
+    
+    Sets up fine-tuning configuration with training dataset and hyperparameters.
+    Note: This endpoint configures fine-tuning parameters. 
+    Actual fine-tuning requires OpenAI API fine-tuning jobs.
+    """
+    try:
+        config = FineTuningConfig(
+            training_file=request.training_file,
+            model=request.model,
+            validation_file=request.validation_file,
+            hyperparameters={
+                "n_epochs": request.n_epochs,
+                "batch_size": request.batch_size,
+                "learning_rate_multiplier": request.learning_rate_multiplier
+            },
+            suffix=request.suffix
+        )
+        
+        capability = AICapability(request.model, ["text"])
+        result = capability.fine_tune(config)
+        
+        return {
+            "configuration": config.to_dict(),
+            "status": result["status"],
+            "message": result["message"],
+            "note": "Use OpenAI's fine-tuning API to start the actual fine-tuning job with this configuration"
+        }
+        
+    except Exception as e:
+        logger.exception("Error configuring fine-tuning: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error configuring fine-tuning: {str(e)}"
+        )
 
 @app.get("/")
 async def root():
