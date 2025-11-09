@@ -439,12 +439,33 @@ async def send_integration_message(request: IntegrationMessage):
     )
     
     if not result.get("success"):
+        # Sanitize error message to avoid stack trace exposure
+        error_msg = "Failed to send message"
+        if result.get("error"):
+            # Only expose safe, expected error messages
+            safe_errors = [
+                "not found",
+                "disabled",
+                "invalid",
+                "missing",
+                "configuration"
+            ]
+            error_detail = str(result.get("error", "")).lower()
+            if any(safe_err in error_detail for safe_err in safe_errors):
+                error_msg = result.get("error", error_msg)
+        
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=result.get("error", "Failed to send message")
+            detail=error_msg
         )
     
-    return result
+    # Return only safe fields to avoid exposing internal errors
+    safe_result = {
+        "success": result.get("success"),
+        "plugin": result.get("plugin"),
+        "result": result.get("result", {})
+    }
+    return safe_result
 
 @app.post("/integrations/webhook")
 async def process_integration_webhook(request: WebhookPayload):
@@ -466,12 +487,33 @@ async def process_integration_webhook(request: WebhookPayload):
     )
     
     if not result.get("success"):
+        # Sanitize error message to avoid stack trace exposure
+        error_msg = "Failed to process webhook"
+        if result.get("error"):
+            # Only expose safe, expected error messages
+            safe_errors = [
+                "not found",
+                "disabled",
+                "invalid",
+                "missing",
+                "configuration"
+            ]
+            error_detail = str(result.get("error", "")).lower()
+            if any(safe_err in error_detail for safe_err in safe_errors):
+                error_msg = result.get("error", error_msg)
+        
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=result.get("error", "Failed to process webhook")
+            detail=error_msg
         )
     
-    return result
+    # Return only safe fields to avoid exposing internal errors
+    safe_result = {
+        "success": result.get("success"),
+        "plugin": result.get("plugin"),
+        "result": result.get("result", {})
+    }
+    return safe_result
 
 @app.get("/integrations/{plugin_name}/info")
 async def get_integration_info(plugin_name: str):
@@ -520,18 +562,27 @@ async def slack_send_message(channel: str, message: str, thread_ts: Optional[str
     Returns:
         Operation result
     """
-    metadata = {}
-    if thread_ts:
-        metadata["thread_ts"] = thread_ts
-    
-    return await send_integration_message(
-        IntegrationMessage(
-            plugin="slack",
-            channel=channel,
-            message=message,
-            metadata=metadata
+    try:
+        metadata = {}
+        if thread_ts:
+            metadata["thread_ts"] = thread_ts
+        
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="slack",
+                channel=channel,
+                message=message,
+                metadata=metadata
+            )
         )
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Slack send_message: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send Slack message"
+        )
 
 @app.post("/integrations/discord/send")
 async def discord_send_message(channel: str, message: str, embed: Optional[Dict[str, Any]] = None):
@@ -546,18 +597,27 @@ async def discord_send_message(channel: str, message: str, embed: Optional[Dict[
     Returns:
         Operation result
     """
-    metadata = {}
-    if embed:
-        metadata["embed"] = embed
-    
-    return await send_integration_message(
-        IntegrationMessage(
-            plugin="discord",
-            channel=channel,
-            message=message,
-            metadata=metadata
+    try:
+        metadata = {}
+        if embed:
+            metadata["embed"] = embed
+        
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="discord",
+                channel=channel,
+                message=message,
+                metadata=metadata
+            )
         )
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Discord send_message: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send Discord message"
+        )
 
 @app.post("/integrations/notion/create")
 async def notion_create_page(page_id: str, content: str, properties: Optional[Dict[str, Any]] = None):
@@ -572,18 +632,27 @@ async def notion_create_page(page_id: str, content: str, properties: Optional[Di
     Returns:
         Operation result
     """
-    metadata = {"operation": "create_page"}
-    if properties:
-        metadata["properties"] = properties
-    
-    return await send_integration_message(
-        IntegrationMessage(
-            plugin="notion",
-            channel=page_id,
-            message=content,
-            metadata=metadata
+    try:
+        metadata = {"operation": "create_page"}
+        if properties:
+            metadata["properties"] = properties
+        
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="notion",
+                channel=page_id,
+                message=content,
+                metadata=metadata
+            )
         )
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Notion create_page: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create Notion page"
+        )
 
 @app.post("/integrations/google-docs/create")
 async def google_docs_create_document(title: str, content: str):
@@ -597,19 +666,28 @@ async def google_docs_create_document(title: str, content: str):
     Returns:
         Operation result with document ID
     """
-    metadata = {
-        "operation": "create_document",
-        "title": title
-    }
-    
-    return await send_integration_message(
-        IntegrationMessage(
-            plugin="google_docs",
-            channel="new",
-            message=content,
-            metadata=metadata
+    try:
+        metadata = {
+            "operation": "create_document",
+            "title": title
+        }
+        
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="google_docs",
+                channel="new",
+                message=content,
+                metadata=metadata
+            )
         )
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Google Docs create_document: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create Google Docs document"
+        )
 
 @app.post("/integrations/google-docs/append")
 async def google_docs_append_text(document_id: str, content: str, index: Optional[int] = None):
@@ -624,15 +702,24 @@ async def google_docs_append_text(document_id: str, content: str, index: Optiona
     Returns:
         Operation result
     """
-    metadata = {"operation": "append_text"}
-    if index is not None:
-        metadata["index"] = index
-    
-    return await send_integration_message(
-        IntegrationMessage(
-            plugin="google_docs",
-            channel=document_id,
-            message=content,
-            metadata=metadata
+    try:
+        metadata = {"operation": "append_text"}
+        if index is not None:
+            metadata["index"] = index
+        
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="google_docs",
+                channel=document_id,
+                message=content,
+                metadata=metadata
+            )
         )
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Google Docs append_text: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to append text to Google Docs document"
+        )
