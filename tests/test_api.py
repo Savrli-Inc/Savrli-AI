@@ -488,3 +488,291 @@ class TestPlaygroundEndpoint:
         assert "CONTRIBUTOR" in content or "contributor" in content
 
 
+class TestSummarizeEndpoint:
+    """Test text summarization endpoint"""
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_summarize_basic(self, mock_create):
+        """Test basic text summarization"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "This is a summary of the text."
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/summarize", json={
+            "text": "This is a long text that needs to be summarized. It has multiple sentences and contains a lot of information."
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert "summary" in data
+        assert "original_length" in data
+        assert "summary_length" in data
+        assert data["original_length"] > 0
+    
+    def test_summarize_empty_text(self):
+        """Test that empty text is rejected"""
+        response = client.post("/ai/summarize", json={"text": ""})
+        assert response.status_code == 400
+        assert "empty" in response.json()["detail"].lower()
+    
+    def test_summarize_whitespace_only(self):
+        """Test that whitespace-only text is rejected"""
+        response = client.post("/ai/summarize", json={"text": "   "})
+        assert response.status_code == 400
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_summarize_with_max_length(self, mock_create):
+        """Test summarization with max_length parameter"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Brief summary."
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/summarize", json={
+            "text": "Long text here.",
+            "max_length": 50
+        })
+        assert response.status_code == 200
+        assert "summary" in response.json()
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_summarize_with_custom_model(self, mock_create):
+        """Test summarization with custom model"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Summary text."
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/summarize", json={
+            "text": "Text to summarize.",
+            "model": "gpt-4"
+        })
+        assert response.status_code == 200
+
+
+class TestSentimentEndpoint:
+    """Test sentiment analysis endpoint"""
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_sentiment_basic(self, mock_create):
+        """Test basic sentiment analysis"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = '{"sentiment": "positive", "confidence": 0.9, "reasoning": "Happy tone"}'
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/sentiment", json={
+            "text": "I absolutely love this product! It's amazing!"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert "sentiment" in data
+        assert "confidence" in data
+        assert "reasoning" in data
+        assert data["sentiment"] in ["positive", "negative", "neutral"]
+        assert 0.0 <= data["confidence"] <= 1.0
+    
+    def test_sentiment_empty_text(self):
+        """Test that empty text is rejected"""
+        response = client.post("/ai/sentiment", json={"text": ""})
+        assert response.status_code == 400
+        assert "empty" in response.json()["detail"].lower()
+    
+    def test_sentiment_whitespace_only(self):
+        """Test that whitespace-only text is rejected"""
+        response = client.post("/ai/sentiment", json={"text": "   "})
+        assert response.status_code == 400
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_sentiment_negative(self, mock_create):
+        """Test negative sentiment detection"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = '{"sentiment": "negative", "confidence": 0.85, "reasoning": "Disappointed tone"}'
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/sentiment", json={
+            "text": "This is terrible and I'm very disappointed."
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["sentiment"] == "negative"
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_sentiment_neutral(self, mock_create):
+        """Test neutral sentiment detection"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = '{"sentiment": "neutral", "confidence": 0.7, "reasoning": "Factual statement"}'
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/sentiment", json={
+            "text": "The product is available in three colors."
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["sentiment"] == "neutral"
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_sentiment_invalid_json_fallback(self, mock_create):
+        """Test fallback when AI doesn't return valid JSON"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "This is not JSON"
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/sentiment", json={
+            "text": "Test text"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert "sentiment" in data
+        assert data["sentiment"] == "neutral"
+
+
+class TestEmailDraftEndpoint:
+    """Test email drafting endpoint"""
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_draft_email_basic(self, mock_create):
+        """Test basic email drafting"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = """Subject: Meeting Request
+
+Dear Team,
+
+I would like to schedule a meeting.
+
+Best regards,
+John"""
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/draft-email", json={
+            "context": "Schedule a team meeting for next week"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert "email_draft" in data
+        assert "tone" in data
+        assert data["tone"] == "professional"
+    
+    def test_draft_email_empty_context(self):
+        """Test that empty context is rejected"""
+        response = client.post("/ai/draft-email", json={"context": ""})
+        assert response.status_code == 400
+        assert "empty" in response.json()["detail"].lower()
+    
+    def test_draft_email_whitespace_only(self):
+        """Test that whitespace-only context is rejected"""
+        response = client.post("/ai/draft-email", json={"context": "   "})
+        assert response.status_code == 400
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_draft_email_with_recipient(self, mock_create):
+        """Test email drafting with recipient"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Subject: Hello\n\nDear John,\n\nMessage here."
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/draft-email", json={
+            "context": "Say hello",
+            "recipient": "John Smith"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["recipient"] == "John Smith"
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_draft_email_casual_tone(self, mock_create):
+        """Test email drafting with casual tone"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Subject: Quick question\n\nHey!\n\nJust checking in."
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/draft-email", json={
+            "context": "Check in with colleague",
+            "tone": "casual"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["tone"] == "casual"
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_draft_email_formal_tone(self, mock_create):
+        """Test email drafting with formal tone"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Subject: Formal request\n\nDear Sir/Madam,\n\nI am writing to..."
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/draft-email", json={
+            "context": "Request information",
+            "tone": "formal"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["tone"] == "formal"
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_draft_email_friendly_tone(self, mock_create):
+        """Test email drafting with friendly tone"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Subject: Great news!\n\nHi there,\n\nHope you're doing well!"
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/draft-email", json={
+            "context": "Share good news",
+            "tone": "friendly"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["tone"] == "friendly"
+    
+    def test_draft_email_invalid_tone(self):
+        """Test that invalid tone is rejected"""
+        response = client.post("/ai/draft-email", json={
+            "context": "Send message",
+            "tone": "invalid_tone"
+        })
+        assert response.status_code == 400
+        assert "tone" in response.json()["detail"].lower()
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_draft_email_with_purpose(self, mock_create):
+        """Test email drafting with purpose"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Subject: Update\n\nDear team,\n\nI wanted to update you..."
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/draft-email", json={
+            "context": "Project progress",
+            "purpose": "update"
+        })
+        assert response.status_code == 200
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_draft_email_all_parameters(self, mock_create):
+        """Test email drafting with all parameters"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Subject: Response\n\nDear Jane,\n\nThank you for your inquiry."
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/draft-email", json={
+            "context": "Respond to customer inquiry",
+            "recipient": "Jane Doe",
+            "tone": "professional",
+            "purpose": "response",
+            "model": "gpt-4"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert data["tone"] == "professional"
+        assert data["recipient"] == "Jane Doe"
+
+

@@ -104,6 +104,9 @@ The API supports both stateless (one-off) and stateful (session-based) conversat
 ✅ **Input Validation** - Comprehensive error handling and validation  
 ✅ **History Management** - View and clear conversation history via API  
 ✅ **Interactive Playground** - Visual interface for testing AI features  
+✅ **Text Summarization** - AI-powered text summarization with customizable length  
+✅ **Sentiment Analysis** - Analyze emotional tone and sentiment of text  
+✅ **Email Drafting** - Generate professional emails with customizable tone and purpose  
 
 ---
 
@@ -158,25 +161,43 @@ The playground is built with vanilla HTML/CSS/JavaScript for easy customization:
 
 Main endpoint for generating AI responses with full feature support.
 
-### 2. **Get Conversation History**
+### 2. **Text Summarization**
+
+`POST /ai/summarize`
+
+Summarize long texts into concise summaries using AI.
+
+### 3. **Sentiment Analysis**
+
+`POST /ai/sentiment`
+
+Analyze the emotional tone and sentiment of text.
+
+### 4. **Email Drafting**
+
+`POST /ai/draft-email`
+
+Generate professional email drafts based on context and requirements.
+
+### 5. **Get Conversation History**
 
 `GET /ai/history/{session_id}?limit=50`
 
 Retrieve conversation history for a specific session.
 
-### 3. **Clear Conversation History**
+### 6. **Clear Conversation History**
 
 `DELETE /ai/history/{session_id}`
 
 Clear all conversation history for a specific session.
 
-### 4. **Interactive Playground**
+### 7. **Interactive Playground**
 
 `GET /playground`
 
 Serves the interactive demo page for testing AI features in a browser.
 
-### 5. **Health Check**
+### 8. **Health Check**
 
 `GET /`
 
@@ -407,6 +428,154 @@ curl -X DELETE https://your-api-url/ai/history/user-123
   "message": "History cleared for session user-123"
 }
 ```
+
+---
+
+### **8. Text Summarization**
+
+Summarize long texts into concise summaries.
+
+```bash
+curl -X POST https://your-api-url/ai/summarize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Artificial intelligence (AI) is intelligence demonstrated by machines, in contrast to the natural intelligence displayed by humans and animals. Leading AI textbooks define the field as the study of intelligent agents: any device that perceives its environment and takes actions that maximize its chance of successfully achieving its goals. Colloquially, the term artificial intelligence is often used to describe machines (or computers) that mimic cognitive functions that humans associate with the human mind, such as learning and problem solving."
+  }'
+```
+
+**Response:**
+```json
+{
+  "summary": "Artificial intelligence (AI) refers to machine-demonstrated intelligence that allows devices to perceive their environment and take goal-oriented actions, mimicking human cognitive functions like learning and problem solving.",
+  "original_length": 73,
+  "summary_length": 28
+}
+```
+
+**With custom summary length:**
+```bash
+curl -X POST https://your-api-url/ai/summarize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Your long text here...",
+    "max_length": 50
+  }'
+```
+
+**Parameters:**
+- `text` (required): The text to summarize
+- `max_length` (optional): Target length in words for the summary
+- `model` (optional): OpenAI model to use (default: gpt-3.5-turbo)
+
+---
+
+### **9. Sentiment Analysis**
+
+Analyze the emotional tone and sentiment of text.
+
+```bash
+curl -X POST https://your-api-url/ai/sentiment \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "I absolutely love this product! It exceeded all my expectations and the customer service was outstanding."
+  }'
+```
+
+**Response:**
+```json
+{
+  "sentiment": "positive",
+  "confidence": 0.95,
+  "reasoning": "The text expresses strong positive emotions with words like 'love', 'exceeded expectations', and 'outstanding'."
+}
+```
+
+**Negative sentiment example:**
+```bash
+curl -X POST https://your-api-url/ai/sentiment \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "I am very disappointed with this purchase. It did not work as advertised."
+  }'
+```
+
+**Response:**
+```json
+{
+  "sentiment": "negative",
+  "confidence": 0.88,
+  "reasoning": "The text conveys disappointment and dissatisfaction with the product."
+}
+```
+
+**Parameters:**
+- `text` (required): The text to analyze
+- `model` (optional): OpenAI model to use (default: gpt-3.5-turbo)
+
+**Response Fields:**
+- `sentiment`: One of "positive", "negative", or "neutral"
+- `confidence`: Float between 0.0 and 1.0 indicating confidence level
+- `reasoning`: Brief explanation of the sentiment analysis
+
+---
+
+### **10. Email Drafting**
+
+Generate professional email drafts based on context.
+
+```bash
+curl -X POST https://your-api-url/ai/draft-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "context": "Need to schedule a project kickoff meeting with the development team for next week",
+    "recipient": "Development Team",
+    "tone": "professional"
+  }'
+```
+
+**Response:**
+```json
+{
+  "email_draft": "Subject: Project Kickoff Meeting - Next Week\n\nDear Development Team,\n\nI hope this email finds you well.\n\nI would like to schedule our project kickoff meeting for next week. This meeting will be an opportunity to discuss project objectives, timelines, and responsibilities.\n\nPlease let me know your availability for next week, and I will send out a calendar invitation accordingly.\n\nLooking forward to working with you all.\n\nBest regards",
+  "tone": "professional",
+  "recipient": "Development Team"
+}
+```
+
+**Casual tone example:**
+```bash
+curl -X POST https://your-api-url/ai/draft-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "context": "Thank a colleague for helping with a bug fix",
+    "recipient": "Sarah",
+    "tone": "casual"
+  }'
+```
+
+**Formal tone with purpose:**
+```bash
+curl -X POST https://your-api-url/ai/draft-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "context": "Request approval for budget increase",
+    "recipient": "Finance Director",
+    "tone": "formal",
+    "purpose": "request"
+  }'
+```
+
+**Parameters:**
+- `context` (required): Description of what the email is about
+- `recipient` (optional): Who the email is addressed to
+- `tone` (optional): One of "professional", "casual", "formal", or "friendly" (default: "professional")
+- `purpose` (optional): Type of email such as "request", "response", "update", etc.
+- `model` (optional): OpenAI model to use (default: gpt-3.5-turbo)
+
+**Response Fields:**
+- `email_draft`: The complete email including subject line, greeting, body, and closing
+- `tone`: The tone used for the email
+- `recipient`: The recipient specified (if provided)
 
 ---
 

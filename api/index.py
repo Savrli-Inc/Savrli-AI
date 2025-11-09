@@ -68,6 +68,227 @@ class ChatRequest(BaseModel):
     # Enable streaming response
     stream: Optional[bool] = False
 
+class SummarizeRequest(BaseModel):
+    text: str
+    max_length: Optional[int] = None  # Maximum length of summary in words
+    model: Optional[str] = None
+
+class SentimentRequest(BaseModel):
+    text: str
+    model: Optional[str] = None
+
+class EmailDraftRequest(BaseModel):
+    context: str  # What the email is about
+    recipient: Optional[str] = None  # Who the email is to
+    tone: Optional[str] = "professional"  # professional, casual, formal, friendly
+    purpose: Optional[str] = None  # request, response, update, etc.
+    model: Optional[str] = None
+
+@app.post("/ai/summarize")
+async def summarize_endpoint(request: SummarizeRequest):
+    """
+    Summarize text using AI
+    
+    This endpoint takes a longer text and returns a concise summary.
+    Useful for condensing articles, documents, or long messages.
+    """
+    if not request.text.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty")
+    
+    model = request.model if request.model is not None else DEFAULT_MODEL
+    
+    # Build the prompt for summarization
+    max_length_instruction = ""
+    if request.max_length:
+        max_length_instruction = f" in approximately {request.max_length} words"
+    
+    system_message = f"You are a professional text summarizer. Provide clear, concise summaries{max_length_instruction}."
+    user_message = f"Please summarize the following text:\n\n{request.text}"
+    
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": user_message}
+    ]
+    
+    try:
+        def call_openai():
+            return client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=500,
+                temperature=0.5  # Lower temperature for more focused summaries
+            )
+        
+        response = await asyncio.to_thread(call_openai)
+        
+        choices = getattr(response, "choices", None)
+        if not choices or len(choices) == 0:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI returned an empty response")
+        
+        message = choices[0].message if hasattr(choices[0], 'message') else choices[0].get("message")
+        content = message.content if hasattr(message, 'content') else message.get("content")
+        
+        if not content:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Unexpected AI response format")
+        
+        summary = content.strip()
+        
+        return {
+            "summary": summary,
+            "original_length": len(request.text.split()),
+            "summary_length": len(summary.split())
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error calling OpenAI for summarization: %s", e)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="AI temporarily unavailable")
+
+@app.post("/ai/sentiment")
+async def sentiment_endpoint(request: SentimentRequest):
+    """
+    Analyze sentiment of text using AI
+    
+    This endpoint analyzes the emotional tone and sentiment of the provided text,
+    returning a sentiment label (positive, negative, neutral) and confidence score.
+    """
+    if not request.text.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Text cannot be empty")
+    
+    model = request.model if request.model is not None else DEFAULT_MODEL
+    
+    system_message = """You are a sentiment analysis expert. Analyze the sentiment of the given text and respond ONLY with a JSON object in this exact format:
+{"sentiment": "positive" or "negative" or "neutral", "confidence": 0.0-1.0, "reasoning": "brief explanation"}"""
+    
+    user_message = f"Analyze the sentiment of this text:\n\n{request.text}"
+    
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": user_message}
+    ]
+    
+    try:
+        def call_openai():
+            return client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=200,
+                temperature=0.3  # Lower temperature for more consistent analysis
+            )
+        
+        response = await asyncio.to_thread(call_openai)
+        
+        choices = getattr(response, "choices", None)
+        if not choices or len(choices) == 0:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI returned an empty response")
+        
+        message = choices[0].message if hasattr(choices[0], 'message') else choices[0].get("message")
+        content = message.content if hasattr(message, 'content') else message.get("content")
+        
+        if not content:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Unexpected AI response format")
+        
+        # Parse JSON response
+        try:
+            result = json.loads(content.strip())
+            return {
+                "sentiment": result.get("sentiment", "neutral"),
+                "confidence": result.get("confidence", 0.5),
+                "reasoning": result.get("reasoning", "")
+            }
+        except json.JSONDecodeError:
+            # Fallback if AI doesn't return valid JSON
+            logger.warning("AI did not return valid JSON for sentiment analysis")
+            return {
+                "sentiment": "neutral",
+                "confidence": 0.5,
+                "reasoning": content.strip()
+            }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error calling OpenAI for sentiment analysis: %s", e)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="AI temporarily unavailable")
+
+@app.post("/ai/draft-email")
+async def draft_email_endpoint(request: EmailDraftRequest):
+    """
+    Generate email drafts using AI
+    
+    This endpoint creates professional email drafts based on the provided context.
+    Supports different tones (professional, casual, formal, friendly) and purposes.
+    """
+    if not request.context.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Context cannot be empty")
+    
+    # Validate tone
+    valid_tones = ["professional", "casual", "formal", "friendly"]
+    tone = request.tone.lower() if request.tone else "professional"
+    if tone not in valid_tones:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail=f"Tone must be one of: {', '.join(valid_tones)}"
+        )
+    
+    model = request.model if request.model is not None else DEFAULT_MODEL
+    
+    # Build the prompt for email drafting
+    recipient_part = f" to {request.recipient}" if request.recipient else ""
+    purpose_part = f"Purpose: {request.purpose}\n" if request.purpose else ""
+    
+    system_message = f"""You are a professional email writer. Draft clear, well-structured emails with a {tone} tone. 
+Include a subject line, greeting, body, and closing. Format the email properly."""
+    
+    user_message = f"""Draft an email{recipient_part} with the following context:
+
+{purpose_part}Context: {request.context}
+
+Please provide:
+1. Subject line
+2. Complete email body with greeting and closing"""
+    
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": user_message}
+    ]
+    
+    try:
+        def call_openai():
+            return client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=800,
+                temperature=0.7
+            )
+        
+        response = await asyncio.to_thread(call_openai)
+        
+        choices = getattr(response, "choices", None)
+        if not choices or len(choices) == 0:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI returned an empty response")
+        
+        message = choices[0].message if hasattr(choices[0], 'message') else choices[0].get("message")
+        content = message.content if hasattr(message, 'content') else message.get("content")
+        
+        if not content:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Unexpected AI response format")
+        
+        email_draft = content.strip()
+        
+        return {
+            "email_draft": email_draft,
+            "tone": tone,
+            "recipient": request.recipient
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error calling OpenAI for email drafting: %s", e)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="AI temporarily unavailable")
+
 @app.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
     if not request.prompt.strip():
