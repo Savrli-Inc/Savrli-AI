@@ -67,23 +67,36 @@ New to Savrli AI? Follow this checklist to get up and running:
 
 ```
 ├── api
-│   └── index.py           # Main FastAPI application
+│   └── index.py                # Main FastAPI application with integrations
+├── integrations
+│   ├── __init__.py             # Plugin package
+│   ├── plugin_base.py          # Base plugin interface and manager
+│   ├── slack_plugin.py         # Slack integration
+│   ├── discord_plugin.py       # Discord integration
+│   ├── notion_plugin.py        # Notion integration
+│   └── google_docs_plugin.py   # Google Docs integration
+├── docs
+│   ├── INTEGRATION_API.md      # Integration API documentation
+│   └── PLUGIN_EXAMPLES.md      # Plugin usage examples
 ├── pages
-│   └── playground.html    # Interactive demo/playground page
+│   └── playground.html         # Interactive demo/playground page
 ├── tests
-│   └── test_api.py        # Comprehensive test suite
+│   ├── test_api.py             # Core API test suite
+│   └── test_integrations.py   # Integration plugin tests
 ├── postman
 │   └── Savrli-AI-Chat.postman_collection.json
-├── requirements.txt       # Python dependencies
-├── vercel.json           # Vercel deployment configuration
-└── README.md             # This file
+├── requirements.txt            # Python dependencies
+├── vercel.json                 # Vercel deployment configuration
+└── README.md                   # This file
 ```
 
 **Description:**
 
-* `api/index.py` — Main FastAPI app exposing chat and history management endpoints
-* `pages/playground.html` — Interactive playground for testing AI features in a browser
-* `tests/test_api.py` — Test suite for validation and functionality
+* `api/index.py` — Main FastAPI app with chat, history, and integration endpoints
+* `integrations/` — Plugin-based integration system for productivity platforms
+* `docs/` — Comprehensive documentation for integrations and extensions
+* `pages/playground.html` — Interactive playground for testing AI features
+* `tests/` — Test suite for core functionality and integrations
 * `postman/Savrli-AI-Chat.postman_collection.json` — Postman collection for testing
 * `requirements.txt` — Python dependencies
 * `vercel.json` — Vercel deployment configuration
@@ -104,6 +117,39 @@ The API supports both stateless (one-off) and stateful (session-based) conversat
 ✅ **Input Validation** - Comprehensive error handling and validation  
 ✅ **History Management** - View and clear conversation history via API  
 ✅ **Interactive Playground** - Visual interface for testing AI features  
+✅ **Platform Integrations** - Connect with Slack, Discord, Notion, and Google Docs  
+✅ **Plugin Architecture** - Extensible system for third-party integrations  
+
+---
+
+## 🔌 Platform Integrations
+
+Savrli AI now supports integration with popular productivity platforms through a flexible plugin architecture.
+
+### **Supported Platforms**
+
+- **Slack** - Send messages, process events, handle slash commands
+- **Discord** - Send messages, process interactions, manage webhooks
+- **Notion** - Create/update pages, manage databases
+- **Google Docs** - Create/update documents, format text
+
+### **Quick Integration Example**
+
+```bash
+# Send AI-generated message to Slack
+curl -X POST https://your-api-url/integrations/slack/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "#general",
+    "message": "Hello from Savrli AI!"
+  }'
+```
+
+### **Integration Documentation**
+
+- 📚 [Integration API Documentation](docs/INTEGRATION_API.md)
+- 💡 [Plugin Examples](docs/PLUGIN_EXAMPLES.md)
+- 🛠️ [Third-Party Extension Guide](docs/INTEGRATION_API.md#third-party-extension-guide)
 
 ---
 
@@ -176,7 +222,39 @@ Clear all conversation history for a specific session.
 
 Serves the interactive demo page for testing AI features in a browser.
 
-### 5. **Health Check**
+### 5. **List Integrations**
+
+`GET /integrations`
+
+Lists all available integration plugins and their status.
+
+### 6. **Send Integration Message**
+
+`POST /integrations/send`
+
+Send a message through a specific integration plugin (Slack, Discord, Notion, Google Docs).
+
+### 7. **Process Integration Webhook**
+
+`POST /integrations/webhook`
+
+Process incoming webhooks from integration platforms.
+
+### 8. **Get Integration Info**
+
+`GET /integrations/{plugin_name}/info`
+
+Get detailed information about a specific integration plugin.
+
+### 9. **Platform-Specific Endpoints**
+
+- `POST /integrations/slack/send` - Send message to Slack
+- `POST /integrations/discord/send` - Send message to Discord
+- `POST /integrations/notion/create` - Create Notion page
+- `POST /integrations/google-docs/create` - Create Google Docs document
+- `POST /integrations/google-docs/append` - Append to Google Docs document
+
+### 10. **Health Check**
 
 `GET /`
 
@@ -489,6 +567,8 @@ The project includes a `vercel.json` file that configures the deployment:
 
 Configure these in your `.env` file for local development or in Vercel dashboard for production:
 
+### **Core AI Variables**
+
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `OPENAI_API_KEY` | ✅ Yes | - | Your OpenAI API key |
@@ -497,6 +577,64 @@ Configure these in your `.env` file for local development or in Vercel dashboard
 | `OPENAI_TEMPERATURE` | No | 0.7 | Default temperature (randomness) |
 | `DEFAULT_CONTEXT_WINDOW` | No | 10 | Default conversation history size |
 | `MAX_HISTORY_PER_SESSION` | No | 20 | Maximum messages stored per session |
+
+### **Integration Variables**
+
+#### Slack Integration
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SLACK_BOT_TOKEN` | No | - | Slack bot token (xoxb-...) |
+| `SLACK_SIGNING_SECRET` | No | - | Slack signing secret for webhooks |
+| `SLACK_ENABLED` | No | false | Enable Slack integration |
+
+#### Discord Integration
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DISCORD_BOT_TOKEN` | No | - | Discord bot token |
+| `DISCORD_APP_ID` | No | - | Discord application ID |
+| `DISCORD_PUBLIC_KEY` | No | - | Discord public key for webhooks |
+| `DISCORD_ENABLED` | No | false | Enable Discord integration |
+
+#### Notion Integration
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `NOTION_API_TOKEN` | No | - | Notion integration token |
+| `NOTION_ENABLED` | No | false | Enable Notion integration |
+
+#### Google Docs Integration
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GOOGLE_DOCS_CREDENTIALS` | No | - | Google service account credentials (JSON) |
+| `GOOGLE_DOCS_ENABLED` | No | false | Enable Google Docs integration |
+
+### **Example .env File**
+
+```bash
+# Core AI
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-3.5-turbo
+OPENAI_MAX_TOKENS=1000
+OPENAI_TEMPERATURE=0.7
+
+# Slack Integration
+SLACK_BOT_TOKEN=xoxb-...
+SLACK_SIGNING_SECRET=...
+SLACK_ENABLED=true
+
+# Discord Integration
+DISCORD_BOT_TOKEN=...
+DISCORD_APP_ID=...
+DISCORD_PUBLIC_KEY=...
+DISCORD_ENABLED=true
+
+# Notion Integration
+NOTION_API_TOKEN=secret_...
+NOTION_ENABLED=true
+
+# Google Docs Integration
+GOOGLE_DOCS_CREDENTIALS=...
+GOOGLE_DOCS_ENABLED=true
+```
 
 ---
 

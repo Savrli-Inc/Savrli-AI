@@ -6,10 +6,17 @@ import os
 import asyncio
 import logging
 import json
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from collections import defaultdict
 from pathlib import Path
+
+# Import plugin system
+from integrations.plugin_base import PluginManager
+from integrations.slack_plugin import SlackPlugin
+from integrations.discord_plugin import DiscordPlugin
+from integrations.notion_plugin import NotionPlugin
+from integrations.google_docs_plugin import GoogleDocsPlugin
 
 app = FastAPI()
 logger = logging.getLogger("api")
@@ -38,6 +45,48 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 # Structure: {session_id: [{"role": "user/assistant", "content": "...", "timestamp": "..."}]}
 conversation_history: Dict[str, List[Dict]] = defaultdict(list)
 MAX_HISTORY_PER_SESSION = int(os.getenv("MAX_HISTORY_PER_SESSION", "20"))
+
+# Initialize plugin manager and register plugins
+plugin_manager = PluginManager(ai_system=client)
+
+# Register Slack plugin
+slack_config = {
+    "bot_token": os.getenv("SLACK_BOT_TOKEN"),
+    "signing_secret": os.getenv("SLACK_SIGNING_SECRET"),
+    "enabled": os.getenv("SLACK_ENABLED", "false").lower() == "true"
+}
+slack_plugin = SlackPlugin(ai_system=client, config=slack_config)
+if slack_config.get("bot_token"):  # Only register if configured
+    plugin_manager.register_plugin("slack", slack_plugin)
+
+# Register Discord plugin
+discord_config = {
+    "bot_token": os.getenv("DISCORD_BOT_TOKEN"),
+    "application_id": os.getenv("DISCORD_APP_ID"),
+    "public_key": os.getenv("DISCORD_PUBLIC_KEY"),
+    "enabled": os.getenv("DISCORD_ENABLED", "false").lower() == "true"
+}
+discord_plugin = DiscordPlugin(ai_system=client, config=discord_config)
+if discord_config.get("bot_token"):  # Only register if configured
+    plugin_manager.register_plugin("discord", discord_plugin)
+
+# Register Notion plugin
+notion_config = {
+    "api_token": os.getenv("NOTION_API_TOKEN"),
+    "enabled": os.getenv("NOTION_ENABLED", "false").lower() == "true"
+}
+notion_plugin = NotionPlugin(ai_system=client, config=notion_config)
+if notion_config.get("api_token"):  # Only register if configured
+    plugin_manager.register_plugin("notion", notion_plugin)
+
+# Register Google Docs plugin
+google_docs_config = {
+    "credentials": os.getenv("GOOGLE_DOCS_CREDENTIALS"),
+    "enabled": os.getenv("GOOGLE_DOCS_ENABLED", "false").lower() == "true"
+}
+google_docs_plugin = GoogleDocsPlugin(ai_system=client, config=google_docs_config)
+if google_docs_config.get("credentials"):  # Only register if configured
+    plugin_manager.register_plugin("google_docs", google_docs_plugin)
 
 def trim_conversation_history(session_id: str):
     """Trim conversation history to MAX_HISTORY_PER_SESSION messages"""
@@ -338,3 +387,339 @@ async def playground():
         html_content = f.read()
     
     return HTMLResponse(content=html_content)
+
+# ============================================================================
+# Integration Endpoints
+# ============================================================================
+
+class IntegrationMessage(BaseModel):
+    """Request model for sending messages via integrations"""
+    plugin: str
+    channel: str
+    message: str
+    metadata: Optional[Dict[str, Any]] = None
+
+class WebhookPayload(BaseModel):
+    """Request model for webhook processing"""
+    plugin: str
+    data: Dict[str, Any]
+
+@app.get("/integrations")
+async def list_integrations():
+    """
+    List all registered integration plugins.
+    
+    Returns a list of available integrations with their status.
+    """
+    plugins = plugin_manager.list_plugins()
+    return {
+        "integrations": plugins,
+        "count": len(plugins)
+    }
+
+@app.post("/integrations/send")
+async def send_integration_message(request: IntegrationMessage):
+    """
+    Send a message via a specific integration plugin.
+    
+    This endpoint allows sending AI-generated or custom messages
+    to integrated platforms like Slack, Discord, Notion, or Google Docs.
+    
+    Args:
+        request: Integration message request with plugin, channel, and message
+        
+    Returns:
+        Result of the send operation
+    """
+    result = plugin_manager.send_message(
+        plugin_name=request.plugin,
+        channel=request.channel,
+        message=request.message,
+        **(request.metadata or {})
+    )
+    
+    if not result.get("success"):
+        # Sanitize error message to avoid stack trace exposure
+        error_msg = "Failed to send message"
+        if result.get("error"):
+            # Only expose safe, expected error messages
+            safe_errors = [
+                "not found",
+                "disabled",
+                "invalid",
+                "missing",
+                "configuration"
+            ]
+            error_detail = str(result.get("error", "")).lower()
+            if any(safe_err in error_detail for safe_err in safe_errors):
+                error_msg = result.get("error", error_msg)
+        
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_msg
+        )
+    
+    # Return only safe fields to avoid exposing internal errors
+    safe_result = {
+        "success": result.get("success"),
+        "plugin": result.get("plugin"),
+        "result": result.get("result", {})
+    }
+    return safe_result
+
+@app.post("/integrations/webhook")
+async def process_integration_webhook(request: WebhookPayload):
+    """
+    Process incoming webhooks from integration platforms.
+    
+    This endpoint handles webhooks from Slack, Discord, Notion,
+    and Google Docs, routing them to the appropriate plugin.
+    
+    Args:
+        request: Webhook payload with plugin identifier and data
+        
+    Returns:
+        Processing result from the plugin
+    """
+    result = plugin_manager.process_webhook(
+        plugin_name=request.plugin,
+        webhook_data=request.data
+    )
+    
+    if not result.get("success"):
+        # Sanitize error message to avoid stack trace exposure
+        error_msg = "Failed to process webhook"
+        if result.get("error"):
+            # Only expose safe, expected error messages
+            safe_errors = [
+                "not found",
+                "disabled",
+                "invalid",
+                "missing",
+                "configuration"
+            ]
+            error_detail = str(result.get("error", "")).lower()
+            if any(safe_err in error_detail for safe_err in safe_errors):
+                error_msg = result.get("error", error_msg)
+        
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_msg
+        )
+    
+    # Return only safe fields to avoid exposing internal errors
+    safe_result = {
+        "success": result.get("success"),
+        "plugin": result.get("plugin"),
+        "result": result.get("result", {})
+    }
+    return safe_result
+
+@app.get("/integrations/{plugin_name}/info")
+async def get_integration_info(plugin_name: str):
+    """
+    Get detailed information about a specific integration plugin.
+    
+    Returns API endpoints, required scopes/permissions, and
+    documentation links for the plugin.
+    
+    Args:
+        plugin_name: Name of the plugin (slack, discord, notion, google_docs)
+        
+    Returns:
+        Plugin information and documentation
+    """
+    plugin = plugin_manager.get_plugin(plugin_name)
+    
+    if not plugin:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Plugin {plugin_name} not found"
+        )
+    
+    # Get plugin API info if available
+    if hasattr(plugin, 'get_api_info'):
+        return plugin.get_api_info()
+    
+    return {
+        "plugin": plugin_name,
+        "enabled": plugin.is_enabled(),
+        "class": plugin.__class__.__name__
+    }
+
+# Platform-specific convenience endpoints
+
+@app.post("/integrations/slack/send")
+async def slack_send_message(channel: str, message: str, thread_ts: Optional[str] = None):
+    """
+    Send a message to Slack (convenience endpoint).
+    
+    Args:
+        channel: Slack channel ID or name
+        message: Message to send
+        thread_ts: Optional thread timestamp for threaded replies
+        
+    Returns:
+        Operation result
+    """
+    try:
+        metadata = {}
+        if thread_ts:
+            metadata["thread_ts"] = thread_ts
+        
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="slack",
+                channel=channel,
+                message=message,
+                metadata=metadata
+            )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Slack send_message: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send Slack message"
+        )
+
+@app.post("/integrations/discord/send")
+async def discord_send_message(channel: str, message: str, embed: Optional[Dict[str, Any]] = None):
+    """
+    Send a message to Discord (convenience endpoint).
+    
+    Args:
+        channel: Discord channel ID
+        message: Message to send
+        embed: Optional embed object
+        
+    Returns:
+        Operation result
+    """
+    try:
+        metadata = {}
+        if embed:
+            metadata["embed"] = embed
+        
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="discord",
+                channel=channel,
+                message=message,
+                metadata=metadata
+            )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Discord send_message: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send Discord message"
+        )
+
+@app.post("/integrations/notion/create")
+async def notion_create_page(page_id: str, content: str, properties: Optional[Dict[str, Any]] = None):
+    """
+    Create or update a Notion page (convenience endpoint).
+    
+    Args:
+        page_id: Notion page or database ID
+        content: Content to add
+        properties: Optional page properties
+        
+    Returns:
+        Operation result
+    """
+    try:
+        metadata = {"operation": "create_page"}
+        if properties:
+            metadata["properties"] = properties
+        
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="notion",
+                channel=page_id,
+                message=content,
+                metadata=metadata
+            )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Notion create_page: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create Notion page"
+        )
+
+@app.post("/integrations/google-docs/create")
+async def google_docs_create_document(title: str, content: str):
+    """
+    Create a new Google Docs document (convenience endpoint).
+    
+    Args:
+        title: Document title
+        content: Initial content
+        
+    Returns:
+        Operation result with document ID
+    """
+    try:
+        metadata = {
+            "operation": "create_document",
+            "title": title
+        }
+        
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="google_docs",
+                channel="new",
+                message=content,
+                metadata=metadata
+            )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Google Docs create_document: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create Google Docs document"
+        )
+
+@app.post("/integrations/google-docs/append")
+async def google_docs_append_text(document_id: str, content: str, index: Optional[int] = None):
+    """
+    Append text to a Google Docs document (convenience endpoint).
+    
+    Args:
+        document_id: Google Docs document ID
+        content: Content to append
+        index: Optional insert position
+        
+    Returns:
+        Operation result
+    """
+    try:
+        metadata = {"operation": "append_text"}
+        if index is not None:
+            metadata["index"] = index
+        
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="google_docs",
+                channel=document_id,
+                message=content,
+                metadata=metadata
+            )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Google Docs append_text: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to append text to Google Docs document"
+        )
