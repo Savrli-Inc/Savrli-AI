@@ -46,16 +46,20 @@ New to Savrli AI? Follow this checklist to get up and running:
   ```
   The API will be available at `http://localhost:8000`
 
-- [ ] **Step 5:** Test with a basic request
+- [ ] **Step 5:** Try the interactive playground (recommended for new users)
+  - Open `http://localhost:8000/playground` in your browser
+  - Use the visual interface to test AI features without writing code
+
+- [ ] **Step 6:** Test with a basic request
   ```bash
   curl -X POST http://localhost:8000/ai/chat \
     -H "Content-Type: application/json" \
     -d '{"prompt": "Hello, how are you?"}'
   ```
 
-- [ ] **Step 6:** Deploy to Vercel (see [Deployment section](#-deployment-vercel))
+- [ ] **Step 7:** Deploy to Vercel (see [Deployment section](#-deployment-vercel))
 
-- [ ] **Step 7:** Test your deployed endpoint with the sample requests below
+- [ ] **Step 8:** Test your deployed endpoint with the sample requests below
 
 ---
 
@@ -64,6 +68,8 @@ New to Savrli AI? Follow this checklist to get up and running:
 ```
 ├── api
 │   └── index.py           # Main FastAPI application
+├── pages
+│   └── playground.html    # Interactive demo/playground page
 ├── tests
 │   └── test_api.py        # Comprehensive test suite
 ├── postman
@@ -76,6 +82,7 @@ New to Savrli AI? Follow this checklist to get up and running:
 **Description:**
 
 * `api/index.py` — Main FastAPI app exposing chat and history management endpoints
+* `pages/playground.html` — Interactive playground for testing AI features in a browser
 * `tests/test_api.py` — Test suite for validation and functionality
 * `postman/Savrli-AI-Chat.postman_collection.json` — Postman collection for testing
 * `requirements.txt` — Python dependencies
@@ -96,6 +103,50 @@ The API supports both stateless (one-off) and stateful (session-based) conversat
 ✅ **Advanced Controls** - Fine-tune AI output with OpenAI parameters  
 ✅ **Input Validation** - Comprehensive error handling and validation  
 ✅ **History Management** - View and clear conversation history via API  
+✅ **Interactive Playground** - Visual interface for testing AI features  
+
+---
+
+## 🎮 Interactive Playground
+
+The Savrli AI Playground provides a user-friendly web interface for testing and experimenting with AI capabilities without writing code.
+
+### **Access the Playground**
+
+Once your server is running, visit:
+```
+http://localhost:8000/playground
+```
+
+Or on your deployed Vercel instance:
+```
+https://your-project.vercel.app/playground
+```
+
+### **Playground Features**
+
+🎯 **Model Selection** - Choose between GPT-3.5 Turbo, GPT-4, and GPT-4 Turbo  
+⚙️ **Parameter Controls** - Adjust temperature, max tokens, and other OpenAI parameters  
+💬 **Conversation History** - Maintain context across multiple messages  
+🎨 **System Instructions** - Customize AI personality and behavior  
+📊 **Real-time Feedback** - See loading states and error messages  
+📱 **Responsive Design** - Works on desktop, tablet, and mobile devices  
+
+### **Perfect For**
+
+- **Onboarding**: New users can understand AI capabilities through hands-on interaction
+- **Testing**: Quickly validate API functionality and response quality
+- **Demos**: Showcase AI features to stakeholders without technical setup
+- **Experimentation**: Try different parameters and prompts to optimize results
+
+### **Contributing to the Playground**
+
+The playground is built with vanilla HTML/CSS/JavaScript for easy customization:
+
+- **Styling**: Update CSS variables in `pages/playground.html` to match your brand
+- **API Endpoint**: Modify `API_ENDPOINT` constant for different backends
+- **New Parameters**: Add inputs in HTML and capture in `buildRequestBody()` function
+- **UI Enhancements**: The code includes inline comments to guide modifications
 
 ---
 
@@ -119,7 +170,13 @@ Retrieve conversation history for a specific session.
 
 Clear all conversation history for a specific session.
 
-### 4. **Health Check**
+### 4. **Interactive Playground**
+
+`GET /playground`
+
+Serves the interactive demo page for testing AI features in a browser.
+
+### 5. **Health Check**
 
 `GET /`
 

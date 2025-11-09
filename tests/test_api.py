@@ -448,3 +448,43 @@ class TestResponseSessionId:
         # session_id should be None or not significant when not provided
         assert "session_id" in data
 
+
+class TestPlaygroundEndpoint:
+    """Test the interactive playground/demo page endpoint"""
+    
+    def test_playground_returns_html(self):
+        """Test that playground endpoint returns HTML content"""
+        response = client.get("/playground")
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/html; charset=utf-8"
+    
+    def test_playground_contains_required_elements(self):
+        """Test that playground HTML contains essential UI elements"""
+        response = client.get("/playground")
+        content = response.text
+        
+        # Check for essential UI elements
+        assert "Savrli AI Playground" in content
+        assert "promptInput" in content  # Input field
+        assert "submitBtn" in content  # Submit button
+        assert "outputPanel" in content  # Output panel
+        assert "modelSelect" in content  # Model selector
+        
+    def test_playground_includes_api_integration(self):
+        """Test that playground includes API integration code"""
+        response = client.get("/playground")
+        content = response.text
+        
+        # Check for API endpoint reference
+        assert "/ai/chat" in content
+        assert "fetch" in content or "XMLHttpRequest" in content
+        
+    def test_playground_has_documentation(self):
+        """Test that playground includes contributor documentation"""
+        response = client.get("/playground")
+        content = response.text
+        
+        # Check for inline documentation
+        assert "CONTRIBUTOR" in content or "contributor" in content
+
+
