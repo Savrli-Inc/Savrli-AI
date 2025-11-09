@@ -1,9 +1,9 @@
 ---
-# **Savrli AI Chat Endpoint**
+# **Savrli AI Multi-Modal Endpoint**
 ---
 
-A powerful FastAPI microservice that provides conversational AI capabilities using OpenAI's GPT models.
-It supports both stateless and stateful conversations with advanced features like streaming responses, conversation history, and customizable AI behavior.
+A powerful FastAPI microservice that provides comprehensive AI capabilities using OpenAI's latest models.
+It supports text conversations, image analysis, audio transcription, image generation, and model fine-tuning.
 Designed for use with the **Savrli app**, deployed on **Vercel**.
 
 > 🌐 **Base URL:** Your endpoint
@@ -67,11 +67,17 @@ New to Savrli AI? Follow this checklist to get up and running:
 
 ```
 ├── api
-│   └── index.py           # Main FastAPI application
+│   └── index.py           # Main FastAPI application with multi-modal support
+├── ai_capabilities.py     # Multi-modal AI capability classes
 ├── pages
 │   └── playground.html    # Interactive demo/playground page
 ├── tests
-│   └── test_api.py        # Comprehensive test suite
+│   ├── test_api.py        # Core API test suite
+│   └── test_multimodal.py # Multi-modal features test suite
+├── tools
+│   └── summarizer.py      # AI text summarization utilities
+├── integrations
+│   └── discord_plugin.py  # Discord integration plugin
 ├── postman
 │   └── Savrli-AI-Chat.postman_collection.json
 ├── requirements.txt       # Python dependencies
@@ -81,10 +87,13 @@ New to Savrli AI? Follow this checklist to get up and running:
 
 **Description:**
 
-* `api/index.py` — Main FastAPI app exposing chat and history management endpoints
+* `api/index.py` — Main FastAPI app with text, image, audio, and fine-tuning endpoints
+* `ai_capabilities.py` — Multi-modal AI capability classes and model configurations
 * `pages/playground.html` — Interactive playground for testing AI features in a browser
-* `tests/test_api.py` — Test suite for validation and functionality
-* `postman/Savrli-AI-Chat.postman_collection.json` — Postman collection for testing
+* `tests/test_api.py` — Test suite for core API validation and functionality
+* `tests/test_multimodal.py` — Test suite for multi-modal features
+* `tools/summarizer.py` — AI-powered text summarization utilities
+* `integrations/discord_plugin.py` — Discord bot integration
 * `requirements.txt` — Python dependencies
 * `vercel.json` — Vercel deployment configuration
 
@@ -92,15 +101,26 @@ New to Savrli AI? Follow this checklist to get up and running:
 
 ## ⚙️ Overview
 
-This API takes a user's text prompt and returns a contextual, conversational response generated via OpenAI's GPT models.
+This API provides comprehensive AI capabilities using OpenAI's latest models, supporting:
+- **Text Processing**: Conversational AI with GPT-3.5 Turbo, GPT-4, and GPT-4 Turbo
+- **Image Analysis**: Visual understanding with GPT-4 Vision
+- **Image Generation**: Create images from text with DALL-E 2 and DALL-E 3
+- **Audio Processing**: Transcribe audio with Whisper
+- **Model Fine-tuning**: Configure custom model training
+
 The API supports both stateless (one-off) and stateful (session-based) conversations with conversation history tracking.
 
 ### **Core Features**
 
+✅ **Multi-Modal Processing** - Text, image, and audio input/output support  
 ✅ **Custom AI Behavior** - Define assistant personality via system instructions  
 ✅ **Conversation History** - Multi-turn conversations with session management  
 ✅ **Streaming Responses** - Real-time token streaming for better UX  
 ✅ **Advanced Controls** - Fine-tune AI output with OpenAI parameters  
+✅ **Image Analysis** - Analyze and describe images with GPT-4 Vision  
+✅ **Image Generation** - Create images from text prompts with DALL-E  
+✅ **Audio Transcription** - Convert speech to text with Whisper  
+✅ **Model Fine-tuning** - Configure custom training datasets  
 ✅ **Input Validation** - Comprehensive error handling and validation  
 ✅ **History Management** - View and clear conversation history via API  
 ✅ **Interactive Playground** - Visual interface for testing AI features  
@@ -152,31 +172,77 @@ The playground is built with vanilla HTML/CSS/JavaScript for easy customization:
 
 ## 🔌 API Endpoints
 
-### 1. **Chat Endpoint**
+### **Text Processing**
+
+#### 1. **Chat Endpoint**
 
 `POST /ai/chat`
 
-Main endpoint for generating AI responses with full feature support.
+Main endpoint for generating AI text responses with full feature support.
 
-### 2. **Get Conversation History**
+#### 2. **Get Conversation History**
 
 `GET /ai/history/{session_id}?limit=50`
 
 Retrieve conversation history for a specific session.
 
-### 3. **Clear Conversation History**
+#### 3. **Clear Conversation History**
 
 `DELETE /ai/history/{session_id}`
 
 Clear all conversation history for a specific session.
 
-### 4. **Interactive Playground**
+### **Image Processing**
+
+#### 4. **Image Analysis (Vision)**
+
+`POST /ai/vision`
+
+Analyze images using GPT-4 Vision. Accepts image URL or base64-encoded image data.
+
+#### 5. **Image Generation**
+
+`POST /ai/image/generate`
+
+Generate images from text prompts using DALL-E 2 or DALL-E 3.
+
+### **Audio Processing**
+
+#### 6. **Audio Transcription**
+
+`POST /ai/audio/transcribe`
+
+Transcribe audio files to text using Whisper API. Supports multiple audio formats.
+
+### **Model Management**
+
+#### 7. **List Available Models**
+
+`GET /ai/models`
+
+List all supported AI models and their capabilities (text, image, audio).
+
+#### 8. **Get Model Information**
+
+`GET /ai/models/{model_name}`
+
+Get detailed information about a specific model.
+
+#### 9. **Configure Fine-tuning**
+
+`POST /ai/fine-tune/configure`
+
+Configure fine-tuning parameters for custom model training.
+
+### **Utility Endpoints**
+
+#### 10. **Interactive Playground**
 
 `GET /playground`
 
 Serves the interactive demo page for testing AI features in a browser.
 
-### 5. **Health Check**
+#### 11. **Health Check**
 
 `GET /`
 
@@ -410,6 +476,217 @@ curl -X DELETE https://your-api-url/ai/history/user-123
 
 ---
 
+### **8. Image Analysis with GPT-4 Vision**
+
+Analyze images using GPT-4 Vision with image URL.
+
+```bash
+curl -X POST https://your-api-url/ai/vision \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "What objects are in this image?",
+    "image_url": "https://example.com/image.jpg",
+    "detail": "high"
+  }'
+```
+
+**Response:**
+```json
+{
+  "response": "This image contains a laptop, a coffee cup, and some notebooks on a wooden desk.",
+  "model": "gpt-4-vision-preview",
+  "input_type": "image"
+}
+```
+
+**With Base64 Image:**
+```bash
+curl -X POST https://your-api-url/ai/vision \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Describe this image in detail",
+    "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAA...",
+    "max_tokens": 500
+  }'
+```
+
+---
+
+### **9. Generate Images with DALL-E**
+
+Create images from text prompts using DALL-E 3.
+
+```bash
+curl -X POST https://your-api-url/ai/image/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "A serene landscape with mountains and a lake at sunset",
+    "model": "dall-e-3",
+    "size": "1024x1024",
+    "quality": "hd",
+    "style": "vivid"
+  }'
+```
+
+**Response:**
+```json
+{
+  "images": [
+    {
+      "url": "https://oaidalleapiprodscus.blob.core.windows.net/...",
+      "revised_prompt": "A serene landscape featuring majestic mountains..."
+    }
+  ],
+  "model": "dall-e-3",
+  "count": 1
+}
+```
+
+**Using DALL-E 2:**
+```bash
+curl -X POST https://your-api-url/ai/image/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "A cute robot playing guitar",
+    "model": "dall-e-2",
+    "size": "512x512",
+    "n": 2
+  }'
+```
+
+---
+
+### **10. Transcribe Audio with Whisper**
+
+Convert audio files to text using Whisper API.
+
+```bash
+curl -X POST https://your-api-url/ai/audio/transcribe \
+  -F "file=@/path/to/audio.mp3" \
+  -F "model=whisper-1" \
+  -F "language=en" \
+  -F "response_format=json"
+```
+
+**Response:**
+```json
+{
+  "transcription": "Hello, this is a test audio transcription.",
+  "model": "whisper-1",
+  "input_type": "audio"
+}
+```
+
+**With Additional Context:**
+```bash
+curl -X POST https://your-api-url/ai/audio/transcribe \
+  -F "file=@/path/to/meeting.mp3" \
+  -F "prompt=This is a business meeting discussion" \
+  -F "response_format=verbose_json"
+```
+
+---
+
+### **11. List Available Models**
+
+Get information about all supported AI models.
+
+```bash
+curl -X GET https://your-api-url/ai/models
+```
+
+**Response:**
+```json
+{
+  "models": [
+    {
+      "model_name": "gpt-4",
+      "capabilities": ["text"]
+    },
+    {
+      "model_name": "gpt-4-vision-preview",
+      "capabilities": ["text", "image"]
+    },
+    {
+      "model_name": "whisper-1",
+      "capabilities": ["audio"]
+    },
+    {
+      "model_name": "dall-e-3",
+      "capabilities": ["text", "image"]
+    }
+  ],
+  "total_count": 10,
+  "capabilities": {
+    "text": ["gpt-4", "gpt-4-turbo-preview", "gpt-3.5-turbo"],
+    "image_analysis": ["gpt-4-vision-preview"],
+    "image_generation": ["dall-e-3", "dall-e-2"],
+    "audio": ["whisper-1", "tts-1", "tts-1-hd"]
+  }
+}
+```
+
+---
+
+### **12. Get Model Information**
+
+Get detailed information about a specific model.
+
+```bash
+curl -X GET https://your-api-url/ai/models/gpt-4-vision-preview
+```
+
+**Response:**
+```json
+{
+  "model_name": "gpt-4-vision-preview",
+  "capabilities": ["text", "image"],
+  "status": "available"
+}
+```
+
+---
+
+### **13. Configure Fine-tuning**
+
+Configure parameters for fine-tuning a custom model.
+
+```bash
+curl -X POST https://your-api-url/ai/fine-tune/configure \
+  -H "Content-Type: application/json" \
+  -d '{
+    "training_file": "file-abc123xyz",
+    "model": "gpt-3.5-turbo",
+    "validation_file": "file-def456uvw",
+    "n_epochs": 5,
+    "batch_size": "4",
+    "learning_rate_multiplier": "0.1",
+    "suffix": "custom-support-bot"
+  }'
+```
+
+**Response:**
+```json
+{
+  "configuration": {
+    "training_file": "file-abc123xyz",
+    "model": "gpt-3.5-turbo",
+    "validation_file": "file-def456uvw",
+    "hyperparameters": {
+      "n_epochs": 5,
+      "batch_size": "4",
+      "learning_rate_multiplier": "0.1"
+    },
+    "suffix": "custom-support-bot"
+  },
+  "status": "configured",
+  "message": "Fine-tuning configuration ready - use API endpoints to start fine-tuning",
+  "note": "Use OpenAI's fine-tuning API to start the actual fine-tuning job with this configuration"
+}
+```
+
+---
+
 ## 🚀 Deployment (Vercel)
 
 ### **Prerequisites**
@@ -511,8 +788,13 @@ pip install -r requirements.txt
 # Run all tests
 python -m pytest tests/ -v
 
+# Run specific test file
+python -m pytest tests/test_api.py -v
+python -m pytest tests/test_multimodal.py -v
+
 # Run specific test class
 python -m pytest tests/test_api.py::TestChatRequestValidation -v
+python -m pytest tests/test_multimodal.py::TestVisionEndpoint -v
 
 # Run with coverage
 python -m pytest tests/ --cov=api --cov-report=html
@@ -520,38 +802,114 @@ python -m pytest tests/ --cov=api --cov-report=html
 
 ### **Test Coverage**
 
-The test suite covers:
+The comprehensive test suite includes **54 tests** covering:
+
+**Core API Tests (test_api.py):**
 - ✅ Input validation for all parameters
 - ✅ Error handling and edge cases
 - ✅ Custom system instructions
 - ✅ Conversation history management
 - ✅ Advanced OpenAI parameters
+- ✅ Streaming responses
+- ✅ Session management
 - ✅ Backwards compatibility
+
+**Multi-Modal Tests (test_multimodal.py):**
+- ✅ Image analysis with GPT-4 Vision
+- ✅ Image generation with DALL-E 2 and DALL-E 3
+- ✅ Audio transcription with Whisper
+- ✅ Model listing and information retrieval
+- ✅ Fine-tuning configuration
+- ✅ Multi-modal integration testing
 
 ---
 
 ## 🔧 Troubleshooting
 
-### **Issue: "OPENAI_API_KEY is not set"**
+### **General Issues**
+
+#### **Issue: "OPENAI_API_KEY is not set"**
 **Solution:** Set the environment variable in `.env` file or Vercel dashboard.
 
-### **Issue: "AI temporarily unavailable" (503 error)**
+#### **Issue: "AI temporarily unavailable" (503 error)**
 **Solution:** Check your OpenAI API key, quota, and network connectivity.
 
-### **Issue: "temperature must be between 0.0 and 2.0" (400 error)**
+#### **Issue: "temperature must be between 0.0 and 2.0" (400 error)**
 **Solution:** Ensure all parameters are within valid ranges (see [Request Parameters](#-request-parameters)).
 
-### **Issue: Empty or missing responses**
+#### **Issue: Empty or missing responses**
 **Solution:** Check OpenAI API status and your API quota. Enable logging to see detailed errors.
 
-### **Issue: Streaming not working**
+#### **Issue: Streaming not working**
 **Solution:** Ensure your client supports Server-Sent Events (SSE). Check the streaming example above.
+
+### **Multi-Modal Issues**
+
+#### **Issue: "Form data requires python-multipart to be installed"**
+**Solution:** Install the required package: `pip install python-multipart`
+
+#### **Issue: Vision endpoint returns error "image_url or image_base64 must be provided"**
+**Solution:** Provide either `image_url` (URL to image) or `image_base64` (base64-encoded image data) in your request.
+
+#### **Issue: Image generation fails with "Invalid size" error**
+**Solution:** Ensure you're using valid sizes for the selected model:
+- DALL-E 3: `1024x1024`, `1792x1024`, or `1024x1792`
+- DALL-E 2: `256x256`, `512x512`, or `1024x1024`
+
+#### **Issue: Audio transcription fails**
+**Solution:** 
+- Verify the audio file format is supported (mp3, mp4, mpeg, mpga, m4a, wav, webm)
+- Check file size is under OpenAI's limits
+- Ensure the file is properly uploaded as multipart form data
+
+#### **Issue: Model not found (404 error)**
+**Solution:** Use the `/ai/models` endpoint to get a list of available models and verify the model name.
+
+---
+
+## 🤖 Supported AI Models
+
+### **Text Generation Models**
+| Model | Capabilities | Best For |
+|-------|-------------|----------|
+| `gpt-4` | Advanced text generation | Complex reasoning, detailed analysis |
+| `gpt-4-turbo-preview` | Fast text generation | High-performance applications |
+| `gpt-3.5-turbo` | Efficient text generation | General-purpose chatbots, cost-effective |
+
+### **Vision Models**
+| Model | Capabilities | Best For |
+|-------|-------------|----------|
+| `gpt-4-vision-preview` | Image understanding + text | Image analysis, visual Q&A, OCR |
+
+### **Image Generation Models**
+| Model | Capabilities | Supported Sizes |
+|-------|-------------|-----------------|
+| `dall-e-3` | High-quality image generation | 1024x1024, 1792x1024, 1024x1792 |
+| `dall-e-2` | Fast image generation | 256x256, 512x512, 1024x1024 |
+
+### **Audio Models**
+| Model | Capabilities | Best For |
+|-------|-------------|----------|
+| `whisper-1` | Speech-to-text transcription | Audio transcription, meeting notes |
+| `tts-1` | Text-to-speech synthesis | Voice generation (standard quality) |
+| `tts-1-hd` | High-definition text-to-speech | Voice generation (high quality) |
+
+### **Fine-tuning Support**
+Fine-tuning is available for:
+- ✅ `gpt-3.5-turbo` - Best for custom chatbots and specialized tasks
+- ✅ `gpt-4` - Available for enterprise customers
+
+Use the `/ai/fine-tune/configure` endpoint to set up fine-tuning parameters.
 
 ---
 
 ## 📚 Additional Resources
 
 - [OpenAI API Documentation](https://platform.openai.com/docs)
+- [GPT-4 Vision Guide](https://platform.openai.com/docs/guides/vision)
+- [DALL-E Image Generation](https://platform.openai.com/docs/guides/images)
+- [Whisper Audio Transcription](https://platform.openai.com/docs/guides/speech-to-text)
+- [Fine-tuning Guide](https://platform.openai.com/docs/guides/fine-tuning)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Vercel Python Deployment](https://vercel.com/docs/functions/serverless-functions/runtimes/python)
 - [Server-Sent Events (SSE)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
