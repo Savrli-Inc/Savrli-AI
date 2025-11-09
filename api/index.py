@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
 from pydantic import BaseModel
 from openai import OpenAI
 import os
@@ -9,6 +9,7 @@ import json
 from typing import Optional, List, Dict
 from datetime import datetime, timezone
 from collections import defaultdict
+from pathlib import Path
 
 app = FastAPI()
 logger = logging.getLogger("api")
@@ -306,3 +307,34 @@ async def clear_conversation_history(session_id: str):
 @app.get("/")
 async def root():
     return {"message": "Savrli AI Chat API is running!"}
+
+@app.get("/playground", response_class=HTMLResponse)
+async def playground():
+    """
+    Serve the interactive playground/demo page
+    
+    This endpoint serves a static HTML page that provides an interactive UI
+    for testing the Savrli AI backend capabilities. Users can:
+    - Submit prompts and get instant AI responses
+    - Adjust AI parameters (model, temperature, max tokens)
+    - Maintain conversation history with session management
+    - Test different models and configurations
+    
+    The playground is useful for:
+    - Onboarding new users to understand AI capabilities
+    - Testing API functionality in a user-friendly interface
+    - Demonstrating features to stakeholders
+    - Debugging and experimenting with different parameters
+    """
+    playground_path = Path(__file__).parent.parent / "pages" / "playground.html"
+    
+    if not playground_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Playground page not found"
+        )
+    
+    with open(playground_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+    
+    return HTMLResponse(content=html_content)
