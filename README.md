@@ -1,947 +1,594 @@
----
-# **Savrli AI Multi-Modal Endpoint**
----
-
-A powerful FastAPI microservice that provides comprehensive AI capabilities using OpenAI's latest models.
-It supports text conversations, image analysis, audio transcription, image generation, and model fine-tuning.
-Designed for use with the **Savrli app**, deployed on **Vercel**.
-
-> 🌐 **Base URL:** Your endpoint
 
 ---
 
-## 🚀 Quick Start Onboarding Checklist
-
-New to Savrli AI? Follow this checklist to get up and running:
-
-- [ ] **Step 1:** Clone the repository
-  ```bash
-  git clone https://github.com/Savrli-Inc/Savrli-AI.git
-  cd Savrli-AI
-  ```
-
-- [ ] **Step 2:** Install dependencies
-  ```bash
-  pip install -r requirements.txt
-  ```
-
-- [ ] **Step 3:** Set up environment variables
-  - Create a `.env` file in the project root
-  - Add your OpenAI API key:
-    ```
-    OPENAI_API_KEY=your-api-key-here
-    ```
-  - Optional environment variables:
-    ```
-    OPENAI_MODEL=gpt-3.5-turbo
-    OPENAI_MAX_TOKENS=1000
-    OPENAI_TEMPERATURE=0.7
-    DEFAULT_CONTEXT_WINDOW=10
-    MAX_HISTORY_PER_SESSION=20
-    ```
-
-- [ ] **Step 4:** Run the API locally
-  ```bash
-  uvicorn api.index:app --reload
-  ```
-  The API will be available at `http://localhost:8000`
-
-- [ ] **Step 5:** Try the interactive playground (recommended for new users)
-  - Open `http://localhost:8000/playground` in your browser
-  - Use the visual interface to test AI features without writing code
-
-- [ ] **Step 6:** Test with a basic request
-  ```bash
-  curl -X POST http://localhost:8000/ai/chat \
-    -H "Content-Type: application/json" \
-    -d '{"prompt": "Hello, how are you?"}'
-  ```
-
-- [ ] **Step 7:** Deploy to Vercel (see [Deployment section](#-deployment-vercel))
-
-- [ ] **Step 8:** Test your deployed endpoint with the sample requests below
-
----
-
-## 📁 Project Structure
-
-```
-├── api
-│   └── index.py           # Main FastAPI application with multi-modal support
-├── ai_capabilities.py     # Multi-modal AI capability classes
-├── pages
-│   └── playground.html    # Interactive demo/playground page
-├── tests
-│   ├── test_api.py        # Core API test suite
-│   └── test_multimodal.py # Multi-modal features test suite
-├── tools
-│   └── summarizer.py      # AI text summarization utilities
-├── integrations
-│   └── discord_plugin.py  # Discord integration plugin
-├── postman
-│   └── Savrli-AI-Chat.postman_collection.json
-├── requirements.txt       # Python dependencies
-├── vercel.json           # Vercel deployment configuration
-└── README.md             # This file
-```
-
-**Description:**
-
-* `api/index.py` — Main FastAPI app with text, image, audio, and fine-tuning endpoints
-* `ai_capabilities.py` — Multi-modal AI capability classes and model configurations
-* `pages/playground.html` — Interactive playground for testing AI features in a browser
-* `tests/test_api.py` — Test suite for core API validation and functionality
-* `tests/test_multimodal.py` — Test suite for multi-modal features
-* `tools/summarizer.py` — AI-powered text summarization utilities
-* `integrations/discord_plugin.py` — Discord bot integration
-* `requirements.txt` — Python dependencies
-* `vercel.json` — Vercel deployment configuration
-
----
-
-## ⚙️ Overview
-
-This API provides comprehensive AI capabilities using OpenAI's latest models, supporting:
-- **Text Processing**: Conversational AI with GPT-3.5 Turbo, GPT-4, and GPT-4 Turbo
-- **Image Analysis**: Visual understanding with GPT-4 Vision
-- **Image Generation**: Create images from text with DALL-E 2 and DALL-E 3
-- **Audio Processing**: Transcribe audio with Whisper
-- **Model Fine-tuning**: Configure custom model training
-
-The API supports both stateless (one-off) and stateful (session-based) conversations with conversation history tracking.
-
-### **Core Features**
-
-✅ **Multi-Modal Processing** - Text, image, and audio input/output support  
-✅ **Custom AI Behavior** - Define assistant personality via system instructions  
-✅ **Conversation History** - Multi-turn conversations with session management  
-✅ **Streaming Responses** - Real-time token streaming for better UX  
-✅ **Advanced Controls** - Fine-tune AI output with OpenAI parameters  
-✅ **Image Analysis** - Analyze and describe images with GPT-4 Vision  
-✅ **Image Generation** - Create images from text prompts with DALL-E  
-✅ **Audio Transcription** - Convert speech to text with Whisper  
-✅ **Model Fine-tuning** - Configure custom training datasets  
-✅ **Input Validation** - Comprehensive error handling and validation  
-✅ **History Management** - View and clear conversation history via API  
-✅ **Interactive Playground** - Visual interface for testing AI features  
-
----
-
-## 🎮 Interactive Playground
-
-The Savrli AI Playground provides a user-friendly web interface for testing and experimenting with AI capabilities without writing code.
-
-### **Access the Playground**
-
-Once your server is running, visit:
-```
-http://localhost:8000/playground
-```
-
-Or on your deployed Vercel instance:
-```
-https://your-project.vercel.app/playground
-```
-
-### **Playground Features**
-
-🎯 **Model Selection** - Choose between GPT-3.5 Turbo, GPT-4, and GPT-4 Turbo  
-⚙️ **Parameter Controls** - Adjust temperature, max tokens, and other OpenAI parameters  
-💬 **Conversation History** - Maintain context across multiple messages  
-🎨 **System Instructions** - Customize AI personality and behavior  
-📊 **Real-time Feedback** - See loading states and error messages  
-📱 **Responsive Design** - Works on desktop, tablet, and mobile devices  
-
-### **Perfect For**
-
-- **Onboarding**: New users can understand AI capabilities through hands-on interaction
-- **Testing**: Quickly validate API functionality and response quality
-- **Demos**: Showcase AI features to stakeholders without technical setup
-- **Experimentation**: Try different parameters and prompts to optimize results
-
-### **Contributing to the Playground**
-
-The playground is built with vanilla HTML/CSS/JavaScript for easy customization:
-
-- **Styling**: Update CSS variables in `pages/playground.html` to match your brand
-- **API Endpoint**: Modify `API_ENDPOINT` constant for different backends
-- **New Parameters**: Add inputs in HTML and capture in `buildRequestBody()` function
-- **UI Enhancements**: The code includes inline comments to guide modifications
-
----
-
-## 🔌 API Endpoints
-
-### **Text Processing**
-
-#### 1. **Chat Endpoint**
-
-`POST /ai/chat`
-
-Main endpoint for generating AI text responses with full feature support.
-
-#### 2. **Get Conversation History**
-
-`GET /ai/history/{session_id}?limit=50`
-
-Retrieve conversation history for a specific session.
-
-#### 3. **Clear Conversation History**
-
-`DELETE /ai/history/{session_id}`
-
-Clear all conversation history for a specific session.
-
-### **Image Processing**
-
-#### 4. **Image Analysis (Vision)**
-
-`POST /ai/vision`
-
-Analyze images using GPT-4 Vision. Accepts image URL or base64-encoded image data.
-
-#### 5. **Image Generation**
-
-`POST /ai/image/generate`
-
-Generate images from text prompts using DALL-E 2 or DALL-E 3.
-
-### **Audio Processing**
-
-#### 6. **Audio Transcription**
-
-`POST /ai/audio/transcribe`
-
-Transcribe audio files to text using Whisper API. Supports multiple audio formats.
-
-### **Model Management**
-
-#### 7. **List Available Models**
-
-`GET /ai/models`
-
-List all supported AI models and their capabilities (text, image, audio).
-
-#### 8. **Get Model Information**
-
-`GET /ai/models/{model_name}`
-
-Get detailed information about a specific model.
-
-#### 9. **Configure Fine-tuning**
-
-`POST /ai/fine-tune/configure`
-
-Configure fine-tuning parameters for custom model training.
-
-### **Utility Endpoints**
-
-#### 10. **Interactive Playground**
-
-`GET /playground`
-
-Serves the interactive demo page for testing AI features in a browser.
-
-#### 11. **Health Check**
-
-`GET /`
-
-Returns API status confirmation.
-
----
-
-## 📝 Request Parameters
-
-### **Required Parameters**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `prompt` | string | User's text input (required, non-empty) |
-
-### **Optional Parameters**
-
-| Parameter | Type | Range | Default | Description |
-|-----------|------|-------|---------|-------------|
-| `session_id` | string | - | None | Session identifier for conversation history |
-| `system` | string | - | Default assistant | Custom system instruction defining AI behavior |
-| `stream` | boolean | - | false | Enable Server-Sent Events streaming |
-| `model` | string | - | gpt-3.5-turbo | OpenAI model to use |
-| `max_tokens` | integer | 1-2000 | 1000 | Maximum tokens in response |
-| `temperature` | float | 0.0-2.0 | 0.7 | Sampling temperature (higher = more random) |
-| `top_p` | float | 0.0-1.0 | - | Nucleus sampling parameter |
-| `frequency_penalty` | float | -2.0 to 2.0 | - | Penalize token frequency (reduce repetition) |
-| `presence_penalty` | float | -2.0 to 2.0 | - | Penalize token presence (increase diversity) |
-| `context_window` | integer | 0-50 | 10 | Number of previous conversation turns to include |
-
----
-
-## 📡 Response Codes & Error Handling
-
-| Status Code | Meaning | When It Occurs | Example Response |
-|-------------|---------|----------------|------------------|
-| **200** | ✅ Success | Valid request processed successfully | `{"response": "AI reply", "session_id": "user-123"}` |
-| **400** | ⚠️ Bad Request | Invalid input parameters | `{"detail": "Prompt cannot be empty"}` |
-| **400** | ⚠️ Bad Request | Parameter out of range | `{"detail": "temperature must be between 0.0 and 2.0"}` |
-| **400** | ⚠️ Bad Request | Invalid max_tokens | `{"detail": "max_tokens must be between 1 and 2000"}` |
-| **400** | ⚠️ Bad Request | Invalid top_p | `{"detail": "top_p must be between 0.0 and 1.0"}` |
-| **400** | ⚠️ Bad Request | Invalid frequency_penalty | `{"detail": "frequency_penalty must be between -2.0 and 2.0"}` |
-| **400** | ⚠️ Bad Request | Invalid presence_penalty | `{"detail": "presence_penalty must be between -2.0 and 2.0"}` |
-| **400** | ⚠️ Bad Request | Invalid context_window | `{"detail": "context_window must be between 0 and 50"}` |
-| **502** | ❌ Bad Gateway | OpenAI returned unexpected response format | `{"detail": "AI returned an empty response"}` |
-| **503** | ❌ Service Unavailable | OpenAI API failure, rate limit, or network issue | `{"detail": "AI temporarily unavailable"}` |
-
-### **Common Error Scenarios**
-
-1. **Empty Prompt**: Submit a non-empty prompt string
-2. **Invalid Temperature**: Use a value between 0.0 and 2.0
-3. **OpenAI API Issues**: Check your API key and quota
-4. **Rate Limiting**: Implement retry logic with exponential backoff
-
----
-
-## 🧪 Example Requests
-
-### **1. Basic Chat Request**
-
-Simple one-off conversation without history.
-
-```bash
-curl -X POST https://your-api-url/ai/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Recommend a quick breakfast recipe"
-  }'
-```
-
-**Response:**
-```json
-{
-  "response": "How about scrambled eggs with avocado toast and a side of orange juice?",
-  "session_id": null
+### 2. `api/index.py`
+
+```python
+from fastapi import FastAPI, HTTPException, status
+from fastapi.responses import StreamingResponse, HTMLResponse
+from pydantic import BaseModel
+from openai import OpenAI
+import os
+import asyncio
+import logging
+import json
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timezone
+from collections import defaultdict
+from pathlib import Path
+
+# ----------------------------------------------------------------------
+# Imports – plugins
+# ----------------------------------------------------------------------
+from integrations.plugin_base import PluginManager
+from integrations.slack_plugin import SlackPlugin
+from integrations.discord_plugin import DiscordPlugin
+from integrations.notion_plugin import NotionPlugin
+from integrations.google_docs_plugin import GoogleDocsPlugin
+
+# ----------------------------------------------------------------------
+# Imports – multi-modal & tools
+# ----------------------------------------------------------------------
+from ai_multimodal import MultiModalProcessor, FineTuningConfig, model_registry
+from tools.summarizer import Summarizer
+from tools.sentiment_analysis import SentimentAnalyzer
+from tools.email_drafter import EmailDrafter
+from tools.workflow_automation import WorkflowAutomation
+
+# ----------------------------------------------------------------------
+# FastAPI app
+# ----------------------------------------------------------------------
+app = FastAPI()
+logger = logging.getLogger("api")
+logging.basicConfig(level=logging.INFO)
+
+# ----------------------------------------------------------------------
+# Configuration & OpenAI client
+# ----------------------------------------------------------------------
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    logger.error("OPENAI_API_KEY is not set.")
+    raise RuntimeError("OPENAI_API_KEY environment variable is required")
+
+DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+DEFAULT_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
+DEFAULT_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+DEFAULT_CONTEXT_WINDOW = int(os.getenv("DEFAULT_CONTEXT_WINDOW", "10"))
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+# In-memory conversation history
+conversation_history: Dict[str, List[Dict]] = defaultdict(list)
+MAX_HISTORY_PER_SESSION = int(os.getenv("MAX_HISTORY_PER_SESSION", "20"))
+
+# ----------------------------------------------------------------------
+# Plugin manager & registration
+# ----------------------------------------------------------------------
+plugin_manager = PluginManager(ai_system=client)
+
+# Multi-modal processor
+multimodal_processor = MultiModalProcessor(openai_client=client)
+
+# Advanced AI tools
+summarizer = Summarizer()
+sentiment_analyzer = SentimentAnalyzer()
+email_drafter = EmailDrafter()
+workflow_automation = WorkflowAutomation()
+
+# ---- Slack ----
+slack_config = {
+    "bot_token": os.getenv("SLACK_BOT_TOKEN"),
+    "signing_secret": os.getenv("SLACK_SIGNING_SECRET"),
+    "enabled": os.getenv("SLACK_ENABLED", "false").lower() == "true",
 }
-```
+slack_plugin = SlackPlugin(ai_system=client, config=slack_config)
+if slack_config.get("bot_token"):
+    plugin_manager.register_plugin("slack", slack_plugin)
 
----
+# ---- Discord ----
+discord_config = {
+    "bot_token": os.getenv("DISCORD_BOT_TOKEN"),
+    "application_id": os.getenv("DISCORD_APP_ID"),
+    "public_key": os.getenv("DISCORD_PUBLIC_KEY"),
+    "enabled": os.getenv("DISCORD_ENABLED", "false").lower() == "true",
+}
+discord_plugin = DiscordPlugin(ai_system=client, config=discord_config)
+if discord_config.get("bot_token"):
+    plugin_manager.register_plugin("discord", discord_plugin)
 
-### **2. Chat with Custom System Instructions**
+# ---- Notion ----
+notion_config = {
+    "api_token": os.getenv("NOTION_API_TOKEN"),
+    "enabled": os.getenv("NOTION_ENABLED", "false").lower() == "true",
+}
+notion_plugin = NotionPlugin(ai_system=client, config=notion_config)
+if notion_config.get("api_token"):
+    plugin_manager.register_plugin("notion", notion_plugin)
 
-Define the AI's personality and expertise.
+# ---- Google Docs ----
+google_docs_config = {
+    "credentials": os.getenv("GOOGLE_DOCS_CREDENTIALS"),
+    "enabled": os.getenv("GOOGLE_DOCS_ENABLED", "false").lower() == "true",
+}
+google_docs_plugin = GoogleDocsPlugin(ai_system=client, config=google_docs_config)
+if google_docs_config.get("credentials"):
+    plugin_manager.register_plugin("google_docs", google_docs_plugin)
 
-```bash
-curl -X POST https://your-api-url/ai/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Write a Python function to calculate fibonacci",
-    "system": "You are an expert Python developer who writes clean, well-documented code."
-  }'
-```
+# ----------------------------------------------------------------------
+# Helper
+# ----------------------------------------------------------------------
+def trim_conversation_history(session_id: str):
+    if len(conversation_history[session_id]) > MAX_HISTORY_PER_SESSION:
+        conversation_history[session_id] = conversation_history[session_id][-MAX_HISTORY_PER_SESSION:]
 
----
+# ----------------------------------------------------------------------
+# Pydantic models
+# ----------------------------------------------------------------------
+class Message(BaseModel):
+    role: str
+    content: str
+    timestamp: Optional[str] = None
 
-### **3. Conversational Chat with History**
+class ChatRequest(BaseModel):
+    prompt: str
+    max_tokens: Optional[int] = None
+    temperature: Optional[float] = None
+    model: Optional[str] = None
+    top_p: Optional[float] = None
+    frequency_penalty: Optional[float] = None
+    presence_penalty: Optional[float] = None
+    system: Optional[str] = None
+    session_id: Optional[str] = None
+    context_window: Optional[int] = None
+    stream: Optional[bool] = False
 
-Multi-turn conversation with context awareness.
+# Multi-modal models
+class VisionRequest(BaseModel):
+    prompt: str
+    image_url: str
+    model: Optional[str] = "gpt-4-vision-preview"
+    max_tokens: Optional[int] = 1000
+    session_id: Optional[str] = None
 
-```bash
-# First message
-curl -X POST https://your-api-url/ai/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "What is the capital of France?",
-    "session_id": "user-123"
-  }'
+class ImageGenerationRequest(BaseModel):
+    prompt: str
+    n: Optional[int] = 1
+    size: Optional[str] = "1024x1024"
+    quality: Optional[str] = "standard"
+    model: Optional[str] = "dall-e-3"
+    session_id: Optional[str] = None
 
-# Follow-up message (AI remembers previous context)
-curl -X POST https://your-api-url/ai/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "What is its population?",
-    "session_id": "user-123"
-  }'
-```
+class AudioRequest(BaseModel):
+    audio_url: str
+    model: Optional[str] = "whisper-1"
+    language: Optional[str] = None
 
----
+class FineTuningRequest(BaseModel):
+    model: str
+    training_file: str
+    validation_file: Optional[str] = None
+    n_epochs: Optional[int] = 3
+    batch_size: Optional[int] = None
+    learning_rate_multiplier: Optional[float] = None
+    suffix: Optional[str] = None
 
-### **4. Advanced Request with All Parameters**
+# AI Tools
+class SummarizeRequest(BaseModel):
+    text: str
+    max_length: Optional[int] = 128
+    style: Optional[str] = "concise"
 
-Fine-tuned AI behavior with custom parameters.
+class SentimentRequest(BaseModel):
+    text: str
+    detailed: Optional[bool] = False
 
-```bash
-curl -X POST https://your-api-url/ai/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Explain quantum computing simply",
-    "system": "You are a patient teacher explaining complex topics to beginners.",
-    "session_id": "user-456",
-    "model": "gpt-3.5-turbo",
-    "temperature": 0.8,
-    "top_p": 0.9,
-    "frequency_penalty": 0.3,
-    "presence_penalty": 0.3,
-    "max_tokens": 500,
-    "context_window": 5
-  }'
-```
+class EmailDraftRequest(BaseModel):
+    purpose: str
+    recipient: Optional[str] = None
+    tone: Optional[str] = "professional"
+    key_points: Optional[List[str]] = None
+    length: Optional[str] = "medium"
+    context: Optional[str] = None
 
----
+class WorkflowRequest(BaseModel):
+    task_description: str
+    constraints: Optional[List[str]] = None
+    tools_available: Optional[List[str]] = None
 
-### **5. Streaming Response**
+# Integrations
+class IntegrationMessage(BaseModel):
+    plugin: str
+    channel: str
+    message: str
+    metadata: Optional[Dict[str, Any]] = None
 
-Get real-time streaming responses using Server-Sent Events.
+class WebhookPayload(BaseModel):
+    plugin: str
+    data: Dict[str, Any]
 
-```bash
-curl -X POST https://your-api-url/ai/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Tell me a short story",
-    "stream": true
-  }'
-```
+# ----------------------------------------------------------------------
+# Core endpoint – chat
+# ----------------------------------------------------------------------
+@app.post("/ai/chat")
+async def chat_endpoint(request: ChatRequest):
+    # ---- validation ----
+    if not request.prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+    max_tokens = request.max_tokens or DEFAULT_MAX_TOKENS
+    if not (1 <= max_tokens <= 2000):
+        raise HTTPException(status_code=400, detail="max_tokens must be between 1 and 2000")
+    temperature = request.temperature or DEFAULT_TEMPERATURE
+    if not (0.0 <= temperature <= 2.0):
+        raise HTTPException(status_code=400, detail="temperature must be between 0.0 and 2.0")
+    top_p = request.top_p
+    if top_p is not None and not (0.0 <= top_p <= 1.0):
+        raise HTTPException(status_code=400, detail="top_p must be between 0.0 and 1.0")
+    frequency_penalty = request.frequency_penalty
+    if frequency_penalty is not None and not (-2.0 <= frequency_penalty <= 2.0):
+        raise HTTPException(status_code=400, detail="frequency_penalty must be between -2.0 and 2.0")
+    presence_penalty = request.presence_penalty
+    if presence_penalty is not None and not (-2.0 <= presence_penalty <= 2.0):
+        raise HTTPException(status_code=400, detail="presence_penalty must be between -2.0 and 2.0")
+    context_window = request.context_window or DEFAULT_CONTEXT_WINDOW
+    if not (0 <= context_window <= 50):
+        raise HTTPException(status_code=400, detail="context_window must be between 0 and 50")
 
-**Response (SSE format):**
-```
-data: {"content": "Once"}
+    model = request.model or DEFAULT_MODEL
+    session_id = request.session_id
+    system_message = request.system or "You are a helpful assistant."
 
-data: {"content": " upon"}
+    messages: List[Dict] = [{"role": "system", "content": system_message}]
+    if session_id and session_id in conversation_history:
+        recent = conversation_history[session_id][-context_window:] if context_window > 0 else []
+        messages.extend([{"role": m["role"], "content": m["content"]} for m in recent])
+    messages.append({"role": "user", "content": request.prompt})
 
-data: {"content": " a"}
+    if session_id:
+        conversation_history[session_id].append({
+            "role": "user",
+            "content": request.prompt,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        })
+        trim_conversation_history(session_id)
 
-data: {"content": " time"}
+    try:
+        if request.stream:
+            return StreamingResponse(
+                stream_openai_response(model, messages, max_tokens, temperature,
+                                       top_p, frequency_penalty,
+                                       presence_penalty, session_id),
+                media_type="text/event-stream",
+            )
+        else:
+            return await get_complete_response(model, messages, max_tokens, temperature,
+                                               top_p, frequency_penalty,
+                                               presence_penalty, session_id)
+    except Exception as e:
+        logger.exception("OpenAI error: %s", e)
+        raise HTTPException(status_code=503, detail="AI temporarily unavailable")
 
-data: {"done": true}
-```
+# ----------------------------------------------------------------------
+# Non-streaming & streaming helpers
+# ----------------------------------------------------------------------
+async def get_complete_response(model, messages, max_tokens, temperature, top_p,
+                                frequency_penalty, presence_penalty, session_id):
+    def call():
+        kwargs = {k: v for k, v in {
+            "model": model, "messages": messages, "max_tokens": max_tokens,
+            "temperature": temperature, "top_p": top_p,
+            "frequency_penalty": frequency_penalty,
+            "presence_penalty": presence_penalty,
+        }.items() if v is not None}
+        return client.chat.completions.create(**kwargs)
+    response = await asyncio.to_thread(call)
+    content = response.choices[0].message.content.strip()
+    if session_id:
+        conversation_history[session_id].append({
+            "role": "assistant", "content": content,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        trim_conversation_history(session_id)
+    return {"response": content, "session_id": session_id}
 
-**JavaScript Example for Streaming:**
-```javascript
-const eventSource = new EventSource('/ai/chat');
-eventSource.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  if (data.done) {
-    eventSource.close();
-  } else if (data.content) {
-    console.log(data.content); // Append to UI
-  } else if (data.error) {
-    console.error(data.error);
-    eventSource.close();
-  }
-};
-```
+async def stream_openai_response(model, messages, max_tokens, temperature, top_p,
+                                 frequency_penalty, presence_penalty, session_id):
+    full = ""
+    try:
+        def stream():
+            kwargs = {k: v for k, v in {
+                "model": model, "messages": messages, "max_tokens": max_tokens,
+                "temperature": temperature, "stream": True,
+                "top_p": top_p, "frequency_penalty": frequency_penalty,
+                "presence_penalty": presence_penalty
+            }.items() if v is not None}
+            return client.chat.completions.create(**kwargs)
+        stream_obj = await asyncio.to_thread(stream)
+        for chunk in stream_obj:
+            if chunk.choices and (delta := chunk.choices[0].delta.content):
+                full += delta
+                yield f"data: {json.dumps({'content': delta})}\n\n"
+        yield f"data: {json.dumps({'done': True})}\n\n"
+        if full and session_id:
+            conversation_history[session_id].append({
+                "role": "assistant", "content": full,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            trim_conversation_history(session_id)
+    except Exception as e:
+        logger.exception("Stream error: %s", e)
+        yield f"data: {json.dumps({'error': 'Stream failed'})}\n\n"
 
----
+# ----------------------------------------------------------------------
+# History endpoints
+# ----------------------------------------------------------------------
+@app.get("/ai/history/{session_id}")
+async def get_conversation_history(session_id: str, limit: Optional[int] = 50):
+    msgs = conversation_history.get(session_id, [])
+    if limit:
+        msgs = msgs[-limit:]
+    return {"session_id": session_id, "messages": msgs,
+            "total_messages": len(conversation_history.get(session_id, []))}
 
-### **6. Get Conversation History**
+@app.delete("/ai/history/{session_id}")
+async def clear_conversation_history(session_id: str):
+    if session_id in conversation_history:
+        del conversation_history[session_id]
+        return {"message": f"History cleared for session {session_id}"}
+    return {"message": f"No history found for session {session_id}"}
 
-Retrieve conversation history for a session.
+# ----------------------------------------------------------------------
+# Multi-Modal AI Endpoints
+# ----------------------------------------------------------------------
+@app.get("/ai/models")
+async def list_ai_models(model_type: Optional[str] = None):
+    try:
+        models = multimodal_processor.list_available_models(model_type=model_type)
+        return {"models": models, "count": len(models)}
+    except Exception as e:
+        logger.exception("Model list error: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to list models")
 
-```bash
-curl -X GET https://your-api-url/ai/history/user-123?limit=10
-```
+@app.get("/ai/models/{model_id}")
+async def get_model_info(model_id: str):
+    try:
+        return multimodal_processor.get_model_info(model_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.exception("Model info error: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to get model info")
 
-**Response:**
-```json
-{
-  "session_id": "user-123",
-  "messages": [
-    {
-      "role": "user",
-      "content": "What is the capital of France?",
-      "timestamp": "2025-11-08T12:00:00.000Z"
-    },
-    {
-      "role": "assistant",
-      "content": "The capital of France is Paris.",
-      "timestamp": "2025-11-08T12:00:01.000Z"
+@app.post("/ai/vision")
+async def analyze_image(request: VisionRequest):
+    if not request.prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+    if not request.image_url.strip():
+        raise HTTPException(status_code=400, detail="Image URL cannot be empty")
+    try:
+        result = multimodal_processor.process_vision(
+            prompt=request.prompt,
+            image_url=request.image_url,
+            model_id=request.model,
+            max_tokens=request.max_tokens
+        )
+        if request.session_id:
+            conversation_history[request.session_id].append({
+                "role": "user", "content": f"[Image: {request.image_url}] {request.prompt}",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            conversation_history[request.session_id].append({
+                "role": "assistant", "content": result,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            trim_conversation_history(request.session_id)
+        return {"response": result, "model": request.model, "session_id": request.session_id}
+    except Exception as e:
+        logger.exception("Vision error: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to process image")
+
+@app.post("/ai/image/generate")
+async def generate_image(request: ImageGenerationRequest):
+    if not request.prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+    if request.n not in [1, 2, 3, 4]:
+        raise HTTPException(status_code=400, detail="n must be 1-4")
+    if request.size not in ["1024x1024", "1792x1024", "1024x1792"]:
+        raise HTTPException(status_code=400, detail="Invalid size")
+    if request.quality not in ["standard", "hd"]:
+        raise HTTPException(status_code=400, detail="quality must be standard or hd")
+    try:
+        response = client.images.generate(
+            model=request.model,
+            prompt=request.prompt,
+            n=request.n,
+            size=request.size,
+            quality=request.quality
+        )
+        images = [{"url": img.url, "revised_prompt": img.revised_prompt} for img in response.data]
+        if request.session_id:
+            conversation_history[request.session_id].append({
+                "role": "user", "content": f"[Generate: {request.prompt}]",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            trim_conversation_history(request.session_id)
+        return {"images": images, "prompt": request.prompt, "session_id": request.session_id}
+    except Exception as e:
+        logger.exception("Image gen error: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to generate image")
+
+@app.post("/ai/audio/transcribe")
+async def transcribe_audio(request: AudioRequest):
+    raise HTTPException(status_code=501, detail="Audio transcription not implemented yet")
+
+@app.post("/ai/fine-tune/configure")
+async def configure_fine_tuning(request: FineTuningRequest):
+    config = FineTuningConfig(
+        model_id=request.model,
+        training_file=request.training_file,
+        validation_file=request.validation_file,
+        n_epochs=request.n_epochs or 3,
+        batch_size=request.batch_size,
+        learning_rate_multiplier=request.learning_rate_multiplier,
+        suffix=request.suffix
+    )
+    is_valid, msg = config.validate()
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=msg)
+    info = multimodal_processor.get_model_info(request.model)
+    if not info.get("supports_fine_tuning"):
+        raise HTTPException(status_code=400, detail=f"Model {request.model} does not support fine-tuning")
+    return {"success": True, "message": "Configuration validated", "config": config.to_dict()}
+
+@app.get("/ai/models/fine-tunable")
+async def list_fine_tunable_models():
+    models = model_registry.list_models(supports_fine_tuning=True)
+    return {"models": models, "count": len(models)}
+
+# ----------------------------------------------------------------------
+# Advanced AI Tools
+# ----------------------------------------------------------------------
+@app.get("/ai/tools")
+async def list_ai_tools():
+    return {
+        "tools": [
+            {"name": "summarize", "endpoint": "/ai/tools/summarize", "description": "Summarize text"},
+            {"name": "sentiment", "endpoint": "/ai/tools/sentiment", "description": "Analyze sentiment"},
+            {"name": "email_draft", "endpoint": "/ai/tools/email/draft", "description": "Draft emails"},
+            {"name": "workflow", "endpoint": "/ai/tools/workflow/suggest", "description": "Suggest workflows"}
+        ],
+        "count": 4
     }
-  ],
-  "total_messages": 2
-}
-```
-
----
-
-### **7. Clear Conversation History**
-
-Delete all conversation history for a session.
-
-```bash
-curl -X DELETE https://your-api-url/ai/history/user-123
-```
-
-**Response:**
-```json
-{
-  "message": "History cleared for session user-123"
-}
-```
-
----
-
-### **8. Image Analysis with GPT-4 Vision**
-
-Analyze images using GPT-4 Vision with image URL.
-
-```bash
-curl -X POST https://your-api-url/ai/vision \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "What objects are in this image?",
-    "image_url": "https://example.com/image.jpg",
-    "detail": "high"
-  }'
-```
-
-**Response:**
-```json
-{
-  "response": "This image contains a laptop, a coffee cup, and some notebooks on a wooden desk.",
-  "model": "gpt-4-vision-preview",
-  "input_type": "image"
-}
-```
-
-**With Base64 Image:**
-```bash
-curl -X POST https://your-api-url/ai/vision \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "Describe this image in detail",
-    "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAA...",
-    "max_tokens": 500
-  }'
-```
-
----
-
-### **9. Generate Images with DALL-E**
-
-Create images from text prompts using DALL-E 3.
-
-```bash
-curl -X POST https://your-api-url/ai/image/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "A serene landscape with mountains and a lake at sunset",
-    "model": "dall-e-3",
-    "size": "1024x1024",
-    "quality": "hd",
-    "style": "vivid"
-  }'
-```
-
-**Response:**
-```json
-{
-  "images": [
-    {
-      "url": "https://oaidalleapiprodscus.blob.core.windows.net/...",
-      "revised_prompt": "A serene landscape featuring majestic mountains..."
-    }
-  ],
-  "model": "dall-e-3",
-  "count": 1
-}
-```
-
-**Using DALL-E 2:**
-```bash
-curl -X POST https://your-api-url/ai/image/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "A cute robot playing guitar",
-    "model": "dall-e-2",
-    "size": "512x512",
-    "n": 2
-  }'
-```
-
----
-
-### **10. Transcribe Audio with Whisper**
-
-Convert audio files to text using Whisper API.
-
-```bash
-curl -X POST https://your-api-url/ai/audio/transcribe \
-  -F "file=@/path/to/audio.mp3" \
-  -F "model=whisper-1" \
-  -F "language=en" \
-  -F "response_format=json"
-```
-
-**Response:**
-```json
-{
-  "transcription": "Hello, this is a test audio transcription.",
-  "model": "whisper-1",
-  "input_type": "audio"
-}
-```
-
-**With Additional Context:**
-```bash
-curl -X POST https://your-api-url/ai/audio/transcribe \
-  -F "file=@/path/to/meeting.mp3" \
-  -F "prompt=This is a business meeting discussion" \
-  -F "response_format=verbose_json"
-```
-
----
-
-### **11. List Available Models**
-
-Get information about all supported AI models.
-
-```bash
-curl -X GET https://your-api-url/ai/models
-```
-
-**Response:**
-```json
-{
-  "models": [
-    {
-      "model_name": "gpt-4",
-      "capabilities": ["text"]
-    },
-    {
-      "model_name": "gpt-4-vision-preview",
-      "capabilities": ["text", "image"]
-    },
-    {
-      "model_name": "whisper-1",
-      "capabilities": ["audio"]
-    },
-    {
-      "model_name": "dall-e-3",
-      "capabilities": ["text", "image"]
-    }
-  ],
-  "total_count": 10,
-  "capabilities": {
-    "text": ["gpt-4", "gpt-4-turbo-preview", "gpt-3.5-turbo"],
-    "image_analysis": ["gpt-4-vision-preview"],
-    "image_generation": ["dall-e-3", "dall-e-2"],
-    "audio": ["whisper-1", "tts-1", "tts-1-hd"]
-  }
-}
-```
-
----
-
-### **12. Get Model Information**
-
-Get detailed information about a specific model.
-
-```bash
-curl -X GET https://your-api-url/ai/models/gpt-4-vision-preview
-```
-
-**Response:**
-```json
-{
-  "model_name": "gpt-4-vision-preview",
-  "capabilities": ["text", "image"],
-  "status": "available"
-}
-```
-
----
-
-### **13. Configure Fine-tuning**
-
-Configure parameters for fine-tuning a custom model.
-
-```bash
-curl -X POST https://your-api-url/ai/fine-tune/configure \
-  -H "Content-Type: application/json" \
-  -d '{
-    "training_file": "file-abc123xyz",
-    "model": "gpt-3.5-turbo",
-    "validation_file": "file-def456uvw",
-    "n_epochs": 5,
-    "batch_size": "4",
-    "learning_rate_multiplier": "0.1",
-    "suffix": "custom-support-bot"
-  }'
-```
-
-**Response:**
-```json
-{
-  "configuration": {
-    "training_file": "file-abc123xyz",
-    "model": "gpt-3.5-turbo",
-    "validation_file": "file-def456uvw",
-    "hyperparameters": {
-      "n_epochs": 5,
-      "batch_size": "4",
-      "learning_rate_multiplier": "0.1"
-    },
-    "suffix": "custom-support-bot"
-  },
-  "status": "configured",
-  "message": "Fine-tuning configuration ready - use API endpoints to start fine-tuning",
-  "note": "Use OpenAI's fine-tuning API to start the actual fine-tuning job with this configuration"
-}
-```
-
----
-
-## 🚀 Deployment (Vercel)
-
-### **Prerequisites**
-
-1. GitHub account with your repository
-2. Vercel account (free tier works)
-3. OpenAI API key
-
-### **Deployment Steps**
-
-1. **Push to GitHub**
-   ```bash
-   git add .
-   git commit -m "Initial commit"
-   git push origin main
-   ```
-
-2. **Link to Vercel**
-   - Go to [vercel.com](https://vercel.com)
-   - Click "Add New Project"
-   - Import your GitHub repository
-
-3. **Configure Environment Variables**
-   
-   In Vercel dashboard, add these environment variables:
-   
-   **Required:**
-   ```
-   OPENAI_API_KEY = your-openai-api-key
-   ```
-   
-   **Optional (with defaults):**
-   ```
-   OPENAI_MODEL = gpt-3.5-turbo
-   OPENAI_MAX_TOKENS = 1000
-   OPENAI_TEMPERATURE = 0.7
-   DEFAULT_CONTEXT_WINDOW = 10
-   MAX_HISTORY_PER_SESSION = 20
-   ```
-
-4. **Deploy**
-   - Click "Deploy"
-   - Wait for deployment to complete
-   - Your API will be live at `https://your-project.vercel.app`
-
-5. **Test Deployment**
-   ```bash
-   curl -X POST https://your-project.vercel.app/ai/chat \
-     -H "Content-Type: application/json" \
-     -d '{"prompt": "Hello!"}'
-   ```
-
-### **vercel.json Configuration**
-
-The project includes a `vercel.json` file that configures the deployment:
-
-```json
-{
-  "builds": [
-    {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "api/index.py"
-    }
-  ]
-}
-```
-
----
-
-## 🧰 Environment Variables
-
-Configure these in your `.env` file for local development or in Vercel dashboard for production:
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | ✅ Yes | - | Your OpenAI API key |
-| `OPENAI_MODEL` | No | gpt-3.5-turbo | Default model for requests |
-| `OPENAI_MAX_TOKENS` | No | 1000 | Default max tokens per response |
-| `OPENAI_TEMPERATURE` | No | 0.7 | Default temperature (randomness) |
-| `DEFAULT_CONTEXT_WINDOW` | No | 10 | Default conversation history size |
-| `MAX_HISTORY_PER_SESSION` | No | 20 | Maximum messages stored per session |
-
----
-
-## 🧪 Testing
-
-### **Run Tests Locally**
-
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Run all tests
-python -m pytest tests/ -v
-
-# Run specific test file
-python -m pytest tests/test_api.py -v
-python -m pytest tests/test_multimodal.py -v
-
-# Run specific test class
-python -m pytest tests/test_api.py::TestChatRequestValidation -v
-python -m pytest tests/test_multimodal.py::TestVisionEndpoint -v
-
-# Run with coverage
-python -m pytest tests/ --cov=api --cov-report=html
-```
-
-### **Test Coverage**
-
-The comprehensive test suite includes **54 tests** covering:
-
-**Core API Tests (test_api.py):**
-- ✅ Input validation for all parameters
-- ✅ Error handling and edge cases
-- ✅ Custom system instructions
-- ✅ Conversation history management
-- ✅ Advanced OpenAI parameters
-- ✅ Streaming responses
-- ✅ Session management
-- ✅ Backwards compatibility
-
-**Multi-Modal Tests (test_multimodal.py):**
-- ✅ Image analysis with GPT-4 Vision
-- ✅ Image generation with DALL-E 2 and DALL-E 3
-- ✅ Audio transcription with Whisper
-- ✅ Model listing and information retrieval
-- ✅ Fine-tuning configuration
-- ✅ Multi-modal integration testing
-
----
-
-## 🔧 Troubleshooting
-
-### **General Issues**
-
-#### **Issue: "OPENAI_API_KEY is not set"**
-**Solution:** Set the environment variable in `.env` file or Vercel dashboard.
-
-#### **Issue: "AI temporarily unavailable" (503 error)**
-**Solution:** Check your OpenAI API key, quota, and network connectivity.
-
-#### **Issue: "temperature must be between 0.0 and 2.0" (400 error)**
-**Solution:** Ensure all parameters are within valid ranges (see [Request Parameters](#-request-parameters)).
-
-#### **Issue: Empty or missing responses**
-**Solution:** Check OpenAI API status and your API quota. Enable logging to see detailed errors.
-
-#### **Issue: Streaming not working**
-**Solution:** Ensure your client supports Server-Sent Events (SSE). Check the streaming example above.
-
-### **Multi-Modal Issues**
-
-#### **Issue: "Form data requires python-multipart to be installed"**
-**Solution:** Install the required package: `pip install python-multipart`
-
-#### **Issue: Vision endpoint returns error "image_url or image_base64 must be provided"**
-**Solution:** Provide either `image_url` (URL to image) or `image_base64` (base64-encoded image data) in your request.
-
-#### **Issue: Image generation fails with "Invalid size" error**
-**Solution:** Ensure you're using valid sizes for the selected model:
-- DALL-E 3: `1024x1024`, `1792x1024`, or `1024x1792`
-- DALL-E 2: `256x256`, `512x512`, or `1024x1024`
-
-#### **Issue: Audio transcription fails**
-**Solution:** 
-- Verify the audio file format is supported (mp3, mp4, mpeg, mpga, m4a, wav, webm)
-- Check file size is under OpenAI's limits
-- Ensure the file is properly uploaded as multipart form data
-
-#### **Issue: Model not found (404 error)**
-**Solution:** Use the `/ai/models` endpoint to get a list of available models and verify the model name.
-
----
-
-## 🤖 Supported AI Models
-
-### **Text Generation Models**
-| Model | Capabilities | Best For |
-|-------|-------------|----------|
-| `gpt-4` | Advanced text generation | Complex reasoning, detailed analysis |
-| `gpt-4-turbo-preview` | Fast text generation | High-performance applications |
-| `gpt-3.5-turbo` | Efficient text generation | General-purpose chatbots, cost-effective |
-
-### **Vision Models**
-| Model | Capabilities | Best For |
-|-------|-------------|----------|
-| `gpt-4-vision-preview` | Image understanding + text | Image analysis, visual Q&A, OCR |
-
-### **Image Generation Models**
-| Model | Capabilities | Supported Sizes |
-|-------|-------------|-----------------|
-| `dall-e-3` | High-quality image generation | 1024x1024, 1792x1024, 1024x1792 |
-| `dall-e-2` | Fast image generation | 256x256, 512x512, 1024x1024 |
-
-### **Audio Models**
-| Model | Capabilities | Best For |
-|-------|-------------|----------|
-| `whisper-1` | Speech-to-text transcription | Audio transcription, meeting notes |
-| `tts-1` | Text-to-speech synthesis | Voice generation (standard quality) |
-| `tts-1-hd` | High-definition text-to-speech | Voice generation (high quality) |
-
-### **Fine-tuning Support**
-Fine-tuning is available for:
-- ✅ `gpt-3.5-turbo` - Best for custom chatbots and specialized tasks
-- ✅ `gpt-4` - Available for enterprise customers
-
-Use the `/ai/fine-tune/configure` endpoint to set up fine-tuning parameters.
-
----
-
-## 📚 Additional Resources
-
-- [OpenAI API Documentation](https://platform.openai.com/docs)
-- [GPT-4 Vision Guide](https://platform.openai.com/docs/guides/vision)
-- [DALL-E Image Generation](https://platform.openai.com/docs/guides/images)
-- [Whisper Audio Transcription](https://platform.openai.com/docs/guides/speech-to-text)
-- [Fine-tuning Guide](https://platform.openai.com/docs/guides/fine-tuning)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [Vercel Python Deployment](https://vercel.com/docs/functions/serverless-functions/runtimes/python)
-- [Server-Sent Events (SSE)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Make your changes and add tests
-4. Run tests to ensure everything passes
-5. Commit your changes (`git commit -m 'Add new feature'`)
-6. Push to your branch (`git push origin feature/your-feature`)
-7. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is part of the Savrli platform. All rights reserved.
-
----
-
-## 🔗 Links
-
-- **Repository:** [Savrli-Inc/Savrli-AI](https://github.com/Savrli-Inc/Savrli-AI)
-- **Issues:** [Report an issue](https://github.com/Savrli-Inc/Savrli-AI/issues)
-- **Discussions:** [Join the discussion](https://github.com/Savrli-Inc/Savrli-AI/discussions)
-
----
-
-**Made with ❤️ by the Savrli Team**
+
+@app.post("/ai/tools/summarize")
+async def summarize_text(request: SummarizeRequest):
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+    if request.max_length < 10 or request.max_length > 1000:
+        raise HTTPException(status_code=400, detail="max_length must be 10-1000")
+    if request.style not in ["concise", "detailed", "bullet_points"]:
+        raise HTTPException(status_code=400, detail="Invalid style")
+    result = summarizer.summarize(request.text, request.max_length, request.style)
+    return result
+
+@app.post("/ai/tools/sentiment")
+async def analyze_sentiment(request: SentimentRequest):
+    if not request.text.strip():
+        raise HTTPException(status_code=400, detail="Text cannot be empty")
+    return sentiment_analyzer.analyze_sentiment(request.text, request.detailed)
+
+@app.post("/ai/tools/email/draft")
+async def draft_email(request: EmailDraftRequest):
+    if not request.purpose.strip():
+        raise HTTPException(status_code=400, detail="Purpose cannot be empty")
+    if request.tone not in ["professional", "casual", "friendly", "formal"]:
+        raise HTTPException(status_code=400, detail="Invalid tone")
+    if request.length not in ["short", "medium", "long"]:
+        raise HTTPException(status_code=400, detail="Invalid length")
+    return email_drafter.draft_email(
+        purpose=request.purpose,
+        recipient=request.recipient,
+        tone=request.tone,
+        key_points=request.key_points,
+        length=request.length,
+        context=request.context
+    )
+
+@app.post("/ai/tools/workflow/suggest")
+async def suggest_workflow(request: WorkflowRequest):
+    if not request.task_description.strip():
+        raise HTTPException(status_code=400, detail="Task description cannot be empty")
+    return workflow_automation.suggest_workflow(
+        task_description=request.task_description,
+        constraints=request.constraints,
+        tools_available=request.tools_available
+    )
+
+# ----------------------------------------------------------------------
+# UI Pages
+# ----------------------------------------------------------------------
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    return {"message": "Savrli AI API is running!"}
+
+@app.get("/playground", response_class=HTMLResponse)
+async def playground():
+    path = Path(__file__).parent.parent / "pages" / "playground.html"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Playground not found")
+    return HTMLResponse(path.read_text(encoding="utf-8"))
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard():
+    path = Path(__file__).parent.parent / "pages" / "dashboard.html"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+    return HTMLResponse(path.read_text(encoding="utf-8"))
+
+# ----------------------------------------------------------------------
+# Integration Endpoints
+# ----------------------------------------------------------------------
+@app.get("/integrations")
+async def list_integrations():
+    return {"integrations": plugin_manager.list_plugins(),
+            "count": len(plugin_manager.list_plugins())}
+
+@app.post("/integrations/send")
+async def send_integration_message(request: IntegrationMessage):
+    result = plugin_manager.send_message(
+        plugin_name=request.plugin,
+        channel=request.channel,
+        message=request.message,
+        **(request.metadata or {})
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Send failed"))
+    return result
+
+@app.post("/integrations/webhook")
+async def process_integration_webhook(request: WebhookPayload):
+    result = plugin_manager.process_webhook(request.plugin, request.data)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Webhook failed"))
+    return result
+
+@app.get("/integrations/{plugin_name}/info")
+async def get_integration_info(plugin_name: str):
+    plugin = plugin_manager.get_plugin(plugin_name)
+    if not plugin:
+        raise HTTPException(status_code=404, detail="Plugin not found")
+    return (plugin.get_api_info() if hasattr(plugin, "get_api_info")
+            else {"plugin": plugin_name, "enabled": plugin.is_enabled(),
+                  "class": plugin.__class__.__name__})
+
+# Platform-specific convenience
+@app.post("/integrations/slack/send")
+async def slack_send(channel: str, message: str, thread_ts: Optional[str] = None):
+    metadata = {"thread_ts": thread_ts} if thread_ts else {}
+    return await send_integration_message(IntegrationMessage(plugin="slack", channel=channel,
+                                                          message=message, metadata=metadata))
+
+@app.post("/integrations/discord/send")
+async def discord_send(channel: str, message: str, embed: Optional[Dict] = None):
+    metadata = {"embed": embed} if embed else {}
+    return await send_integration_message(IntegrationMessage(plugin="discord", channel=channel,
+                                                          message=message, metadata=metadata))
+
+@app.post("/integrations/notion/create")
+async def notion_create(page_id: str, content: str, properties: Optional[Dict] = None):
+    metadata = {"operation": "create_page", "properties": properties or {}}
+    return await send_integration_message(IntegrationMessage(plugin="notion", channel=page_id,
+                                                          message=content, metadata=metadata))
+
+@app.post("/integrations/google-docs/create")
+async def google_docs_create(title: str, content: str):
+    return await send_integration_message(IntegrationMessage(plugin="google_docs", channel="new",
+                                                          message=content,
+                                                          metadata={"operation": "create_document", "title": title}))
+
+@app.post("/integrations/google-docs/append")
+async def google_docs_append(document_id: str, content: str, index: Optional[int] = None):
+    metadata = {"operation": "append_text"}
+    if index is not None:
+        metadata["index"] = index
+    return await send_integration_message(IntegrationMessage(plugin="google_docs", channel=document_id,
+                                                          message=content, metadata=metadata))

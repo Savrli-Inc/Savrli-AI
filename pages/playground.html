@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Savrli AI Playground - Interactive Demo</title>
+    
+    <!-- Markdown and Syntax Highlighting Libraries -->
+    <!-- Marked.js for parsing markdown from AI responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <!-- Highlight.js for syntax highlighting code blocks -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    
     <style>
         /* 
          * Savrli AI Playground Stylesheet
@@ -407,8 +415,54 @@
         .message-content {
             color: var(--text-secondary);
             line-height: 1.6;
-            white-space: pre-wrap;
             word-wrap: break-word;
+        }
+        
+        /* Markdown and Code Block Styling */
+        /* These styles ensure code blocks and markdown are rendered beautifully */
+        .message-content pre {
+            background: var(--background);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            overflow-x: auto;
+            margin: var(--spacing-sm) 0;
+        }
+        
+        .message-content code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .message-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            display: block;
+        }
+        
+        .message-content code:not(pre code) {
+            background: var(--surface-light);
+            padding: 0.125rem 0.375rem;
+            border-radius: var(--radius-sm);
+            color: var(--primary-color);
+        }
+        
+        .message-content p {
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .message-content ul, .message-content ol {
+            margin-left: var(--spacing-lg);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .message-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: var(--spacing-md);
+            margin: var(--spacing-sm) 0;
+            color: var(--text-muted);
+            font-style: italic;
         }
         
         .empty-state {
@@ -464,6 +518,331 @@
         
         .output-panel::-webkit-scrollbar-thumb:hover {
             background: var(--text-muted);
+        }
+        
+        /* Dashboard Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            transition: var(--transition);
+        }
+        
+        .stat-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .stat-icon {
+            font-size: 1.25rem;
+        }
+        
+        /* Charts */
+        .chart-container {
+            background: var(--surface-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-md);
+            height: 200px;
+            position: relative;
+        }
+        
+        .chart-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        #messageChart {
+            width: 100%;
+            height: 150px;
+        }
+        
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none;
+            padding: var(--spacing-md);
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 0.875rem;
+        }
+        
+        .typing-indicator.active {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: typingDot 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typingDot {
+            0%, 60%, 100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+            30% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+        
+        /* Message Actions */
+        .message-actions {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-sm);
+            opacity: 0;
+            transition: var(--transition);
+        }
+        
+        .message:hover .message-actions {
+            opacity: 1;
+        }
+        
+        .action-btn {
+            padding: 0.25rem 0.5rem;
+            background: var(--surface-light);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: var(--transition);
+        }
+        
+        .action-btn:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .quick-action-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: var(--surface-light);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .quick-action-btn:hover {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        
+        /* Export Button */
+        .export-btn {
+            background: var(--surface-light);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: var(--transition);
+        }
+        
+        .export-btn:hover {
+            background: var(--border-color);
+        }
+        
+        /* Mode Tabs */
+        .mode-tabs {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-xl);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0;
+        }
+        
+        .mode-tab {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .mode-tab:hover {
+            color: var(--text-primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .mode-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        
+        .mode-panel {
+            display: none;
+        }
+        
+        .mode-panel.active {
+            display: block;
+        }
+        
+        /* Image Upload Area */
+        .image-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            text-align: center;
+            background: var(--surface-light);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .image-upload-area:hover {
+            border-color: var(--primary-color);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .image-upload-area.has-image {
+            padding: 0;
+            border-style: solid;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: var(--radius-lg);
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-sm);
+            opacity: 0.5;
+        }
+        
+        .upload-text {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        /* Image Gallery */
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+        
+        .gallery-image {
+            position: relative;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: var(--surface-light);
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+        
+        .gallery-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+        }
+        
+        .gallery-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .image-actions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: var(--spacing-sm);
+            display: flex;
+            gap: var(--spacing-xs);
+            opacity: 0;
+            transition: var(--transition);
+        }
+        
+        .gallery-image:hover .image-actions {
+            opacity: 1;
+        }
+        
+        .image-action-btn {
+            flex: 1;
+            padding: var(--spacing-xs);
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: var(--radius-sm);
+            color: white;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .image-action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
         
         /* Responsive Design */
@@ -529,20 +908,71 @@
         <!-- Info Banner -->
         <div class="info-banner">
             <h2>🚀 Welcome to Savrli AI Interactive Demo</h2>
-            <p>Test our AI capabilities in real-time. Enter a prompt, adjust settings, and see instant results from our backend API.</p>
+            <p>Test our AI capabilities in real-time with an enhanced dashboard featuring live stats, interactive charts, and multimodal AI features.</p>
             <ul class="feature-list">
                 <li>Multiple AI Models</li>
                 <li>Conversation History</li>
-                <li>Custom Parameters</li>
+                <li>Vision & Image Analysis</li>
+                <li>Image Generation (DALL-E)</li>
                 <li>Real-time Streaming</li>
+                <li>Usage Analytics</li>
+                <li>Export Conversations</li>
+                <li>Keyboard Shortcuts (⌘K, ⌘E, ⌘⇧C)</li>
             </ul>
         </div>
+        
+        <!-- Mode Tabs -->
+        <div class="mode-tabs" role="tablist" aria-label="AI Mode Selection">
+            <button class="mode-tab active" onclick="switchMode('chat')" role="tab" aria-selected="true" aria-controls="chat-panel">
+                💬 Chat
+            </button>
+            <button class="mode-tab" onclick="switchMode('vision')" role="tab" aria-selected="false" aria-controls="vision-panel">
+                👁️ Vision
+            </button>
+            <button class="mode-tab" onclick="switchMode('image-gen')" role="tab" aria-selected="false" aria-controls="image-gen-panel">
+                🎨 Image Generation
+            </button>
+        </div>
 
-        <!-- Playground Grid -->
-        <div class="playground">
-            <!-- Left Panel: Input & Settings -->
-            <div class="card">
-                <h3 class="card-title">Configuration</h3>
+        <!-- Dashboard Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Messages</div>
+                <div class="stat-value">
+                    <span class="stat-icon">💬</span>
+                    <span id="totalMessages">0</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Session</div>
+                <div class="stat-value">
+                    <span class="stat-icon">⏱️</span>
+                    <span id="sessionDuration">0m</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Response</div>
+                <div class="stat-value">
+                    <span class="stat-icon">⚡</span>
+                    <span id="avgResponse">0s</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Messages Today</div>
+                <div class="stat-value">
+                    <span class="stat-icon">📊</span>
+                    <span id="messagesThisSession">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Mode Panel -->
+        <div id="chat-panel" class="mode-panel active" role="tabpanel" aria-labelledby="chat-tab">
+            <!-- Playground Grid -->
+            <div class="playground">
+                <!-- Left Panel: Input & Settings -->
+                <div class="card">
+                    <h3 class="card-title">Configuration</h3>
                 
                 <!-- Model Selection -->
                 <div class="settings-group">
@@ -599,20 +1029,31 @@
                 <!-- Prompt Input Section -->
                 <div class="prompt-section">
                     <label for="promptInput">Your Prompt</label>
+                    
+                    <!-- Quick Actions -->
+                    <div class="quick-actions" role="group" aria-label="Quick prompt suggestions">
+                        <button class="quick-action-btn" onclick="setQuickPrompt('Explain quantum computing in simple terms')" aria-label="Quick prompt about quantum computing">🔬 Quantum Computing</button>
+                        <button class="quick-action-btn" onclick="setQuickPrompt('Write a Python function to sort a list')" aria-label="Quick prompt for code example">💻 Code Example</button>
+                        <button class="quick-action-btn" onclick="setQuickPrompt('Give me 3 tips for productivity')" aria-label="Quick prompt for productivity tips">✨ Productivity Tips</button>
+                        <button class="quick-action-btn" onclick="setQuickPrompt('Summarize the latest AI trends')" aria-label="Quick prompt about AI trends">📈 AI Trends</button>
+                    </div>
+                    
                     <textarea id="promptInput" 
                               placeholder="Ask anything... Try: 'Explain quantum computing in simple terms' or 'Write a Python function to sort a list'"
-                              maxlength="2000"></textarea>
-                    <div class="char-count">
-                        <span id="charCount">0</span> / 2000 characters
+                              maxlength="2000"
+                              aria-label="Enter your message to the AI"
+                              aria-describedby="charCount"></textarea>
+                    <div class="char-count" id="charCount" role="status" aria-live="polite">
+                        <span id="charCountValue">0</span> / 2000 characters
                     </div>
                 </div>
 
                 <!-- Action Buttons -->
                 <div class="button-group">
-                    <button id="submitBtn" class="btn-primary">
+                    <button id="submitBtn" class="btn-primary" aria-label="Send message to AI">
                         <span id="btnText">Send Message</span>
                     </button>
-                    <button id="clearBtn" class="btn-secondary">Clear History</button>
+                    <button id="clearBtn" class="btn-secondary" aria-label="Clear conversation history">Clear History</button>
                 </div>
 
                 <!-- Status -->
@@ -624,16 +1065,174 @@
 
             <!-- Right Panel: Output -->
             <div class="card">
-                <h3 class="card-title">Response</h3>
-                <div id="outputPanel" class="output-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                    <h3 class="card-title" style="margin-bottom: 0;">Response</h3>
+                    <button class="export-btn" onclick="exportConversation()" aria-label="Export conversation to file">📥 Export</button>
+                </div>
+                
+                <!-- Typing Indicator -->
+                <div id="typingIndicator" class="typing-indicator" role="status" aria-live="polite" aria-label="AI is typing">
+                    <span>AI is typing</span>
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+                
+                <div id="outputPanel" class="output-panel" role="log" aria-live="polite" aria-label="Conversation messages">
                     <div class="empty-state">
                         <div class="empty-state-icon">💬</div>
                         <p>Your AI responses will appear here</p>
                         <p style="font-size: 0.875rem; margin-top: 0.5rem;">Send a message to get started!</p>
                     </div>
                 </div>
+                
+                <!-- Usage Chart -->
+                <div class="chart-container" role="img" aria-label="Message activity chart">
+                    <div class="chart-title">Message Activity</div>
+                    <canvas id="messageChart" aria-label="Bar chart showing message activity over time"></canvas>
+                </div>
             </div>
         </div>
+        </div>
+        <!-- End Chat Mode Panel -->
+
+        <!-- Vision Mode Panel -->
+        <div id="vision-panel" class="mode-panel" role="tabpanel" aria-labelledby="vision-tab">
+            <div class="playground">
+                <!-- Left Panel: Image Upload -->
+                <div class="card">
+                    <h3 class="card-title">Image Analysis</h3>
+                    
+                    <div class="settings-group">
+                        <label>Upload or Enter Image URL</label>
+                        <div id="visionImageUpload" class="image-upload-area" onclick="document.getElementById('visionImageUrl').focus()">
+                            <div id="visionUploadPlaceholder">
+                                <div class="upload-icon">🖼️</div>
+                                <div class="upload-text">Enter image URL below</div>
+                            </div>
+                            <img id="visionPreviewImage" class="preview-image" style="display: none;" alt="Preview">
+                        </div>
+                        <input type="text" id="visionImageUrl" placeholder="https://example.com/image.jpg" style="margin-top: var(--spacing-sm);">
+                        <button onclick="loadVisionPreview()" class="btn-secondary" style="margin-top: var(--spacing-xs); width: 100%;">Load Preview</button>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label for="visionPrompt">What would you like to know about this image?</label>
+                        <textarea id="visionPrompt" placeholder="Describe this image in detail..." style="min-height: 100px; width: 100%; padding: var(--spacing-sm); background: var(--surface-light); border: 1px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>Quick Questions</label>
+                        <div class="quick-actions">
+                            <button class="quick-action-btn" onclick="setVisionPrompt('Describe this image in detail')">📝 Describe</button>
+                            <button class="quick-action-btn" onclick="setVisionPrompt('What objects can you see?')">🔍 Objects</button>
+                            <button class="quick-action-btn" onclick="setVisionPrompt('What is the mood or atmosphere?')">🎭 Mood</button>
+                            <button class="quick-action-btn" onclick="setVisionPrompt('Read any text in this image')">📖 OCR</button>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button id="visionSubmitBtn" class="btn-primary" onclick="analyzeVision()">
+                            <span id="visionBtnText">Analyze Image</span>
+                        </button>
+                        <button class="btn-secondary" onclick="clearVisionInput()">Clear</button>
+                    </div>
+                </div>
+                
+                <!-- Right Panel: Results -->
+                <div class="card">
+                    <h3 class="card-title">Analysis Result</h3>
+                    <div id="visionTypingIndicator" class="typing-indicator">
+                        <span>Analyzing image</span>
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                    <div id="visionOutput" class="output-panel">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">👁️</div>
+                            <p>Upload an image and ask a question to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End Vision Mode Panel -->
+
+        <!-- Image Generation Mode Panel -->
+        <div id="image-gen-panel" class="mode-panel" role="tabpanel" aria-labelledby="image-gen-tab">
+            <div class="playground">
+                <!-- Left Panel: Generation Controls -->
+                <div class="card">
+                    <h3 class="card-title">Image Generation</h3>
+                    
+                    <div class="settings-group">
+                        <label for="imageGenPrompt">Describe the image you want to generate</label>
+                        <textarea id="imageGenPrompt" placeholder="A futuristic cityscape at sunset with flying cars..." style="min-height: 120px; width: 100%; padding: var(--spacing-sm); background: var(--surface-light); border: 1px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>Inspiration Prompts</label>
+                        <div class="quick-actions">
+                            <button class="quick-action-btn" onclick="setImageGenPrompt('A serene mountain landscape at sunrise')">🏔️ Landscape</button>
+                            <button class="quick-action-btn" onclick="setImageGenPrompt('A cute robot reading a book')">🤖 Sci-Fi</button>
+                            <button class="quick-action-btn" onclick="setImageGenPrompt('Abstract art with vibrant colors')">🎨 Abstract</button>
+                            <button class="quick-action-btn" onclick="setImageGenPrompt('A cozy coffee shop interior')">☕ Interior</button>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label for="imageSize">Image Size</label>
+                        <select id="imageSize">
+                            <option value="1024x1024">Square (1024x1024)</option>
+                            <option value="1792x1024">Landscape (1792x1024)</option>
+                            <option value="1024x1792">Portrait (1024x1792)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label for="imageQuality">Quality</label>
+                        <select id="imageQuality">
+                            <option value="standard">Standard</option>
+                            <option value="hd">HD (Higher Quality)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button id="imageGenSubmitBtn" class="btn-primary" onclick="generateImage()">
+                            <span id="imageGenBtnText">🎨 Generate Image</span>
+                        </button>
+                        <button class="btn-secondary" onclick="clearImageGenInput()">Clear</button>
+                    </div>
+                </div>
+                
+                <!-- Right Panel: Generated Images -->
+                <div class="card">
+                    <h3 class="card-title">Generated Images</h3>
+                    <div id="imageGenTypingIndicator" class="typing-indicator">
+                        <span>Generating image</span>
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                    <div id="imageGenOutput" class="output-panel">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🎨</div>
+                            <p>Enter a prompt and click Generate to create AI art</p>
+                        </div>
+                    </div>
+                    <div id="imageGallery" class="image-gallery"></div>
+                </div>
+            </div>
+        </div>
+        <!-- End Image Generation Mode Panel -->
+
     </main>
 
     <script>
@@ -664,7 +1263,7 @@
         const submitBtn = document.getElementById('submitBtn');
         const clearBtn = document.getElementById('clearBtn');
         const outputPanel = document.getElementById('outputPanel');
-        const charCount = document.getElementById('charCount');
+        const charCount = document.getElementById('charCountValue');
         const modelSelect = document.getElementById('modelSelect');
         const temperature = document.getElementById('temperature');
         const maxTokens = document.getElementById('maxTokens');
@@ -675,6 +1274,15 @@
         // State
         let isLoading = false;
         let conversationHistory = [];
+        let messageCount = 0;
+        let sessionStartTime = Date.now();
+        let responseTimes = [];
+        let messageChartData = {
+            labels: [],
+            user: [],
+            assistant: []
+        };
+        let chartInstance = null;
 
         /**
          * Initialize the playground
@@ -692,9 +1300,40 @@
                     sendMessage();
                 }
             });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Ctrl/Cmd + K to focus on prompt
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    promptInput.focus();
+                }
+                
+                // Ctrl/Cmd + E to export
+                if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+                    e.preventDefault();
+                    exportConversation();
+                }
+                
+                // Ctrl/Cmd + Shift + C to clear
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+                    e.preventDefault();
+                    clearConversation();
+                }
+            });
 
             // Load conversation history from localStorage if available
             loadConversationFromStorage();
+            
+            // Initialize stats
+            updateStats();
+            updateSessionDuration();
+            
+            // Update session duration every second
+            setInterval(updateSessionDuration, 1000);
+            
+            // Initialize chart
+            initChart();
         }
 
         /**
@@ -753,6 +1392,8 @@
 
             // Update UI state
             setLoading(true);
+            showTypingIndicator();
+            const requestStartTime = Date.now();
             addMessage('user', prompt);
 
             try {
@@ -777,11 +1418,16 @@
 
                 const data = await response.json();
                 
+                // Calculate response time
+                const responseTime = (Date.now() - requestStartTime) / 1000;
+                responseTimes.push(responseTime);
+                
                 // Display AI response
                 if (data.response) {
                     addMessage('assistant', data.response);
                     promptInput.value = ''; // Clear input
                     updateCharCount();
+                    updateStats();
                 } else {
                     throw new Error('No response received from AI');
                 }
@@ -790,7 +1436,44 @@
                 handleError(error);
             } finally {
                 setLoading(false);
+                hideTypingIndicator();
             }
+        }
+
+        /**
+         * Render output with markdown formatting and syntax highlighting
+         * This function processes AI responses to display code blocks with syntax coloring
+         * and markdown formatting using Marked.js and Highlight.js libraries
+         * 
+         * @param {string} content - The raw content from the AI response
+         * @returns {string} - HTML formatted content with syntax highlighting
+         */
+        function renderOutput(content) {
+            // Configure marked to use Highlight.js for code block syntax highlighting
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    // If language is specified and supported by Highlight.js, use it
+                    if (lang && hljs.getLanguage(lang)) {
+                        try {
+                            return hljs.highlight(code, { language: lang }).value;
+                        } catch (err) {
+                            console.error('Highlight.js error:', err);
+                        }
+                    }
+                    // Otherwise, auto-detect the language
+                    try {
+                        return hljs.highlightAuto(code).value;
+                    } catch (err) {
+                        console.error('Highlight.js auto-detect error:', err);
+                        return code; // Return plain code if highlighting fails
+                    }
+                },
+                breaks: true, // Convert line breaks to <br>
+                gfm: true // Enable GitHub Flavored Markdown
+            });
+            
+            // Parse markdown content to HTML
+            return marked.parse(content);
         }
 
         /**
@@ -808,14 +1491,24 @@
             messageEl.className = `message message-${role}`;
             
             const time = new Date().toLocaleTimeString();
+            const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            // Render content based on role: markdown for assistant, plain text for user
+            const renderedContent = role === 'assistant' ? renderOutput(content) : escapeHtml(content);
             
             messageEl.innerHTML = `
                 <div class="message-header">
                     <span class="message-role">${role === 'user' ? 'You' : 'AI Assistant'}</span>
                     <span class="message-time">${time}</span>
                 </div>
-                <div class="message-content">${escapeHtml(content)}</div>
+                <div class="message-content">${renderedContent}</div>
+                <div class="message-actions">
+                    <button class="action-btn" onclick="copyMessage('${messageId}')">📋 Copy</button>
+                    ${role === 'assistant' ? '<button class="action-btn" onclick="regenerateResponse()">🔄 Regenerate</button>' : ''}
+                </div>
             `;
+            
+            messageEl.id = messageId;
 
             outputPanel.appendChild(messageEl);
             
@@ -825,6 +1518,10 @@
             // Save to history
             conversationHistory.push({ role, content, time });
             saveConversationToStorage();
+            
+            // Update message count and chart
+            messageCount++;
+            updateChartData(role);
         }
 
         /**
@@ -903,7 +1600,22 @@
 
             // Clear state
             conversationHistory = [];
+            messageCount = 0;
+            responseTimes = [];
+            sessionStartTime = Date.now();
+            messageChartData = {
+                labels: [],
+                user: [],
+                assistant: []
+            };
+            
             localStorage.removeItem('savrli_playground_history');
+            
+            // Update stats and chart
+            updateStats();
+            if (chartInstance) {
+                chartInstance.render();
+            }
 
             // Clear backend session if session ID is provided
             const sessionIdValue = sessionId.value.trim();
@@ -955,6 +1667,510 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        /**
+         * Update dashboard statistics
+         */
+        function updateStats() {
+            document.getElementById('totalMessages').textContent = messageCount;
+            document.getElementById('messagesThisSession').textContent = messageCount;
+            
+            // Calculate average response time
+            if (responseTimes.length > 0) {
+                const avg = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
+                document.getElementById('avgResponse').textContent = avg.toFixed(1) + 's';
+            }
+        }
+        
+        /**
+         * Update session duration
+         */
+        function updateSessionDuration() {
+            const duration = Math.floor((Date.now() - sessionStartTime) / 1000 / 60);
+            document.getElementById('sessionDuration').textContent = duration + 'm';
+        }
+        
+        /**
+         * Show typing indicator
+         */
+        function showTypingIndicator() {
+            document.getElementById('typingIndicator').classList.add('active');
+        }
+        
+        /**
+         * Hide typing indicator
+         */
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').classList.remove('active');
+        }
+        
+        /**
+         * Set quick prompt
+         */
+        function setQuickPrompt(prompt) {
+            promptInput.value = prompt;
+            updateCharCount();
+            promptInput.focus();
+        }
+        
+        /**
+         * Copy message to clipboard
+         */
+        function copyMessage(messageId) {
+            const messageEl = document.getElementById(messageId);
+            const contentEl = messageEl.querySelector('.message-content');
+            const text = contentEl.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Show temporary feedback
+                const btn = messageEl.querySelector('.action-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+        
+        /**
+         * Regenerate last response
+         */
+        function regenerateResponse() {
+            // Find the last user message
+            const userMessages = conversationHistory.filter(msg => msg.role === 'user');
+            if (userMessages.length > 0) {
+                const lastUserMessage = userMessages[userMessages.length - 1];
+                promptInput.value = lastUserMessage.content;
+                updateCharCount();
+                sendMessage();
+            }
+        }
+        
+        /**
+         * Export conversation
+         */
+        function exportConversation() {
+            if (conversationHistory.length === 0) {
+                alert('No conversation to export');
+                return;
+            }
+            
+            let text = '# Savrli AI Conversation Export\n';
+            text += `Session ID: ${sessionId.value || 'N/A'}\n`;
+            text += `Date: ${new Date().toLocaleString()}\n`;
+            text += `Total Messages: ${messageCount}\n\n`;
+            text += '---\n\n';
+            
+            conversationHistory.forEach(msg => {
+                text += `**${msg.role === 'user' ? 'You' : 'AI Assistant'}** (${msg.time}):\n`;
+                text += `${msg.content}\n\n`;
+            });
+            
+            // Create download
+            const blob = new Blob([text], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `savrli-conversation-${Date.now()}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        /**
+         * Initialize chart
+         */
+        function initChart() {
+            const canvas = document.getElementById('messageChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Simple bar chart implementation
+            chartInstance = {
+                canvas: canvas,
+                ctx: ctx,
+                data: messageChartData,
+                render: function() {
+                    const width = canvas.width;
+                    const height = canvas.height;
+                    
+                    // Clear canvas
+                    ctx.clearRect(0, 0, width, height);
+                    
+                    if (this.data.labels.length === 0) {
+                        // Show empty state
+                        ctx.fillStyle = '#94a3b8';
+                        ctx.font = '12px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('No data yet. Start chatting to see activity!', width / 2, height / 2);
+                        return;
+                    }
+                    
+                    // Draw bars
+                    const barWidth = Math.max(20, (width - 40) / this.data.labels.length);
+                    const maxValue = Math.max(...this.data.user, ...this.data.assistant, 1);
+                    
+                    this.data.labels.forEach((label, i) => {
+                        const x = 20 + i * barWidth;
+                        const userHeight = (this.data.user[i] / maxValue) * (height - 40);
+                        const assistantHeight = (this.data.assistant[i] / maxValue) * (height - 40);
+                        
+                        // User bar (blue)
+                        ctx.fillStyle = '#6366f1';
+                        ctx.fillRect(x, height - 20 - userHeight, barWidth / 2 - 2, userHeight);
+                        
+                        // Assistant bar (purple)
+                        ctx.fillStyle = '#8b5cf6';
+                        ctx.fillRect(x + barWidth / 2, height - 20 - assistantHeight, barWidth / 2 - 2, assistantHeight);
+                    });
+                    
+                    // Draw legend
+                    ctx.fillStyle = '#6366f1';
+                    ctx.fillRect(width - 100, 10, 10, 10);
+                    ctx.fillStyle = '#f1f5f9';
+                    ctx.font = '10px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('You', width - 85, 18);
+                    
+                    ctx.fillStyle = '#8b5cf6';
+                    ctx.fillRect(width - 100, 25, 10, 10);
+                    ctx.fillStyle = '#f1f5f9';
+                    ctx.fillText('AI', width - 85, 33);
+                }
+            };
+            
+            // Set canvas size
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 150;
+            
+            chartInstance.render();
+        }
+        
+        /**
+         * Update chart data
+         */
+        function updateChartData(role) {
+            const currentTime = new Date();
+            const timeLabel = currentTime.getHours() + ':' + String(currentTime.getMinutes()).padStart(2, '0');
+            
+            // Check if we need to add a new time slot
+            if (messageChartData.labels.length === 0 || messageChartData.labels[messageChartData.labels.length - 1] !== timeLabel) {
+                messageChartData.labels.push(timeLabel);
+                messageChartData.user.push(0);
+                messageChartData.assistant.push(0);
+                
+                // Keep only last 10 time slots
+                if (messageChartData.labels.length > 10) {
+                    messageChartData.labels.shift();
+                    messageChartData.user.shift();
+                    messageChartData.assistant.shift();
+                }
+            }
+            
+            // Update count for current time slot
+            const index = messageChartData.labels.length - 1;
+            if (role === 'user') {
+                messageChartData.user[index]++;
+            } else {
+                messageChartData.assistant[index]++;
+            }
+            
+            // Re-render chart
+            if (chartInstance) {
+                chartInstance.render();
+            }
+        }
+        
+        /**
+         * Switch between different AI modes (chat, vision, image-gen)
+         */
+        function switchMode(mode) {
+            // Update tabs
+            document.querySelectorAll('.mode-tab').forEach(tab => {
+                tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
+            });
+            event.target.classList.add('active');
+            event.target.setAttribute('aria-selected', 'true');
+            
+            // Update panels
+            document.querySelectorAll('.mode-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(`${mode}-panel`).classList.add('active');
+        }
+        
+        /**
+         * Load preview image for vision mode
+         */
+        function loadVisionPreview() {
+            const imageUrl = document.getElementById('visionImageUrl').value.trim();
+            if (!imageUrl) {
+                alert('Please enter an image URL');
+                return;
+            }
+            
+            const previewImage = document.getElementById('visionPreviewImage');
+            const placeholder = document.getElementById('visionUploadPlaceholder');
+            const uploadArea = document.getElementById('visionImageUpload');
+            
+            previewImage.src = imageUrl;
+            previewImage.style.display = 'block';
+            placeholder.style.display = 'none';
+            uploadArea.classList.add('has-image');
+        }
+        
+        /**
+         * Set vision prompt
+         */
+        function setVisionPrompt(prompt) {
+            document.getElementById('visionPrompt').value = prompt;
+        }
+        
+        /**
+         * Analyze image with vision API
+         */
+        async function analyzeVision() {
+            const imageUrl = document.getElementById('visionImageUrl').value.trim();
+            const prompt = document.getElementById('visionPrompt').value.trim();
+            
+            if (!imageUrl) {
+                showVisionError('Please enter an image URL');
+                return;
+            }
+            
+            if (!prompt) {
+                showVisionError('Please enter a question about the image');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('visionSubmitBtn');
+            const btnText = document.getElementById('visionBtnText');
+            submitBtn.disabled = true;
+            btnText.innerHTML = '<div class="spinner"></div> Analyzing...';
+            
+            document.getElementById('visionTypingIndicator').classList.add('active');
+            
+            try {
+                const response = await fetch('/ai/vision', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_url: imageUrl,
+                        prompt: prompt,
+                        session_id: sessionId.value.trim() || undefined
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayVisionResult(data.response);
+                
+            } catch (error) {
+                showVisionError(error.message);
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Analyze Image';
+                document.getElementById('visionTypingIndicator').classList.remove('active');
+            }
+        }
+        
+        /**
+         * Display vision analysis result
+         */
+        function displayVisionResult(result) {
+            const output = document.getElementById('visionOutput');
+            output.innerHTML = `
+                <div class="message message-assistant">
+                    <div class="message-header">
+                        <span class="message-role">AI Vision Analysis</span>
+                        <span class="message-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(result)}</div>
+                </div>
+            `;
+        }
+        
+        /**
+         * Show vision error
+         */
+        function showVisionError(message) {
+            const output = document.getElementById('visionOutput');
+            output.innerHTML = `
+                <div class="message message-error">
+                    <div class="message-header">
+                        <span class="message-role">Error</span>
+                        <span class="message-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(message)}</div>
+                </div>
+            `;
+        }
+        
+        /**
+         * Clear vision input
+         */
+        function clearVisionInput() {
+            document.getElementById('visionImageUrl').value = '';
+            document.getElementById('visionPrompt').value = '';
+            document.getElementById('visionPreviewImage').style.display = 'none';
+            document.getElementById('visionUploadPlaceholder').style.display = 'block';
+            document.getElementById('visionImageUpload').classList.remove('has-image');
+            document.getElementById('visionOutput').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">👁️</div>
+                    <p>Upload an image and ask a question to get started</p>
+                </div>
+            `;
+        }
+        
+        /**
+         * Set image generation prompt
+         */
+        function setImageGenPrompt(prompt) {
+            document.getElementById('imageGenPrompt').value = prompt;
+        }
+        
+        /**
+         * Generate image with DALL-E
+         */
+        async function generateImage() {
+            const prompt = document.getElementById('imageGenPrompt').value.trim();
+            
+            if (!prompt) {
+                showImageGenError('Please enter a description for the image');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('imageGenSubmitBtn');
+            const btnText = document.getElementById('imageGenBtnText');
+            const size = document.getElementById('imageSize').value;
+            const quality = document.getElementById('imageQuality').value;
+            
+            submitBtn.disabled = true;
+            btnText.innerHTML = '<div class="spinner"></div> Generating...';
+            
+            document.getElementById('imageGenTypingIndicator').classList.add('active');
+            
+            try {
+                const response = await fetch('/ai/image/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        size: size,
+                        quality: quality,
+                        n: 1,
+                        session_id: sessionId.value.trim() || undefined
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayGeneratedImage(data.images[0], prompt);
+                
+            } catch (error) {
+                showImageGenError(error.message);
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = '🎨 Generate Image';
+                document.getElementById('imageGenTypingIndicator').classList.remove('active');
+            }
+        }
+        
+        /**
+         * Display generated image
+         */
+        function displayGeneratedImage(imageData, prompt) {
+            const output = document.getElementById('imageGenOutput');
+            const gallery = document.getElementById('imageGallery');
+            
+            // Clear empty state
+            output.innerHTML = `
+                <div class="message message-assistant">
+                    <div class="message-header">
+                        <span class="message-role">Generated Image</span>
+                        <span class="message-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-content">
+                        <strong>Prompt:</strong> ${escapeHtml(prompt)}<br>
+                        ${imageData.revised_prompt ? `<em>Revised: ${escapeHtml(imageData.revised_prompt)}</em>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Add to gallery
+            const galleryItem = document.createElement('div');
+            galleryItem.className = 'gallery-image';
+            galleryItem.innerHTML = `
+                <img src="${imageData.url}" alt="Generated image">
+                <div class="image-actions">
+                    <button class="image-action-btn" onclick="window.open('${imageData.url}', '_blank')">👁️ View</button>
+                    <button class="image-action-btn" onclick="downloadImage('${imageData.url}', 'savrli-ai-image-${Date.now()}.png')">💾 Download</button>
+                </div>
+            `;
+            gallery.insertBefore(galleryItem, gallery.firstChild);
+        }
+        
+        /**
+         * Show image generation error
+         */
+        function showImageGenError(message) {
+            const output = document.getElementById('imageGenOutput');
+            output.innerHTML = `
+                <div class="message message-error">
+                    <div class="message-header">
+                        <span class="message-role">Error</span>
+                        <span class="message-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(message)}</div>
+                </div>
+            `;
+        }
+        
+        /**
+         * Clear image generation input
+         */
+        function clearImageGenInput() {
+            document.getElementById('imageGenPrompt').value = '';
+            document.getElementById('imageGenOutput').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎨</div>
+                    <p>Enter a prompt and click Generate to create AI art</p>
+                </div>
+            `;
+        }
+        
+        /**
+         * Download image
+         */
+        async function downloadImage(url, filename) {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                console.error('Failed to download image:', error);
+                alert('Failed to download image. You can right-click and save it instead.');
+            }
         }
 
         // Initialize on page load

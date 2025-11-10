@@ -203,6 +203,17 @@ class TestRootEndpoint:
         assert "message" in response.json()
 
 
+class TestHelloEndpoint:
+    """Test hello endpoint"""
+    
+    def test_hello(self):
+        """Test that hello endpoint works"""
+        response = client.get("/hello")
+        assert response.status_code == 200
+        assert "message" in response.json()
+        assert response.json()["message"] == "Hello from Savrli AI!"
+
+
 class TestConversationHistory:
     """Test conversation history endpoints"""
     
@@ -486,5 +497,155 @@ class TestPlaygroundEndpoint:
         
         # Check for inline documentation
         assert "CONTRIBUTOR" in content or "contributor" in content
+    
+    def test_playground_includes_syntax_highlighting(self):
+        """Test that playground includes Highlight.js and Marked.js libraries"""
+        response = client.get("/playground")
+        content = response.text
+        
+        # Check for Marked.js CDN link
+        assert "marked" in content.lower()
+        assert "cdn.jsdelivr.net" in content or "marked" in content
+        
+        # Check for Highlight.js CDN link
+        assert "highlight.js" in content.lower() or "hljs" in content
+        assert "cdnjs.cloudflare.com" in content or "highlight" in content
+        
+        # Check for renderOutput function that processes markdown
+        assert "renderOutput" in content
+        assert "marked.parse" in content or "marked.setOptions" in content
+
+
+class TestVisionEndpoint:
+    """Test vision/image analysis endpoint"""
+    
+    def test_vision_empty_prompt(self):
+        """Test that empty prompt is rejected"""
+        response = client.post("/ai/vision", json={
+            "image_url": "https://example.com/image.jpg",
+            "prompt": ""
+        })
+        assert response.status_code == 400
+        assert "empty" in response.json()["detail"].lower()
+    
+    def test_vision_empty_image_url(self):
+        """Test that empty image URL is rejected"""
+        response = client.post("/ai/vision", json={
+            "image_url": "",
+            "prompt": "What's in this image?"
+        })
+        assert response.status_code == 400
+        assert "image url" in response.json()["detail"].lower()
+    
+    def test_vision_invalid_max_tokens(self):
+        """Test that invalid max_tokens is rejected"""
+        response = client.post("/ai/vision", json={
+            "image_url": "https://example.com/image.jpg",
+            "prompt": "Describe this image",
+            "max_tokens": 3000
+        })
+        assert response.status_code == 400
+        assert "max_tokens" in response.json()["detail"]
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_vision_successful_request(self, mock_create):
+        """Test successful vision request"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "This is a test image showing a cat"
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/vision", json={
+            "image_url": "https://example.com/cat.jpg",
+            "prompt": "What's in this image?"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert "response" in data
+        assert "image_url" in data
+        assert data["image_url"] == "https://example.com/cat.jpg"
+
+
+class TestImageGenerationEndpoint:
+    """Test image generation endpoint"""
+    
+    def test_image_gen_empty_prompt(self):
+        """Test that empty prompt is rejected"""
+        response = client.post("/ai/image/generate", json={
+            "prompt": ""
+        })
+        assert response.status_code == 400
+        assert "empty" in response.json()["detail"].lower()
+    
+    def test_image_gen_invalid_n(self):
+        """Test that invalid n parameter is rejected"""
+        response = client.post("/ai/image/generate", json={
+            "prompt": "A beautiful sunset",
+            "n": 15
+        })
+        assert response.status_code == 400
+        assert "n must be between" in response.json()["detail"]
+    
+    def test_image_gen_invalid_size(self):
+        """Test that invalid size is rejected"""
+        response = client.post("/ai/image/generate", json={
+            "prompt": "A beautiful sunset",
+            "size": "999x999"
+        })
+        assert response.status_code == 400
+        assert "size must be one of" in response.json()["detail"]
+    
+    def test_image_gen_invalid_quality(self):
+        """Test that invalid quality is rejected"""
+        response = client.post("/ai/image/generate", json={
+            "prompt": "A beautiful sunset",
+            "quality": "ultra"
+        })
+        assert response.status_code == 400
+        assert "quality must be" in response.json()["detail"]
+    
+    @patch('api.index.client.images.generate')
+    def test_image_gen_successful_request(self, mock_generate):
+        """Test successful image generation request"""
+        mock_response = MagicMock()
+        mock_img = MagicMock()
+        mock_img.url = "https://example.com/generated-image.png"
+        mock_img.revised_prompt = "A beautiful sunset over the ocean"
+        mock_response.data = [mock_img]
+        mock_generate.return_value = mock_response
+        
+        response = client.post("/ai/image/generate", json={
+            "prompt": "A beautiful sunset"
+        })
+        assert response.status_code == 200
+        data = response.json()
+        assert "images" in data
+        assert len(data["images"]) == 1
+        assert data["images"][0]["url"] == "https://example.com/generated-image.png"
+        assert "prompt" in data
+
+
+class TestAudioTranscriptionEndpoint:
+    """Test audio transcription endpoint"""
+    
+    def test_audio_empty_url(self):
+        """Test that empty audio URL is rejected"""
+        response = client.post("/ai/audio/transcribe", json={
+            "audio_url": ""
+        })
+        assert response.status_code == 400
+        assert "audio url" in response.json()["detail"].lower()
+    
+    def test_audio_transcription_configured(self):
+        """Test that audio transcription endpoint is configured"""
+        response = client.post("/ai/audio/transcribe", json={
+            "audio_url": "https://example.com/audio.mp3"
+        })
+        # Audio endpoint is configured but returns configuration info
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] == True
+        assert "result" in data
+        assert data["model"] == "whisper-1"
 
 
