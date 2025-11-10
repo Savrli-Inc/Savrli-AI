@@ -29,6 +29,11 @@ from tools.sentiment_analysis import SentimentAnalyzer
 from tools.email_drafter import EmailDrafter
 from tools.workflow_automation import WorkflowAutomation
 
+# Resource and content management
+from resource_manager import (
+    ConversationExporter, ConversationImporter, SessionManager
+)
+
 # ----------------------------------------------------------------------
 # Logging
 # ----------------------------------------------------------------------
@@ -88,6 +93,9 @@ summarizer = Summarizer()
 sentiment_analyzer = SentimentAnalyzer()
 email_drafter = EmailDrafter()
 workflow_automation = WorkflowAutomation()
+
+# Resource manager
+session_manager = SessionManager(conversation_history)
 
 # Slack
 slack_config = {
@@ -857,3 +865,218 @@ async def google_docs_append(document_id: str, content: str, index: Optional[int
     if index is not None:
         metadata["index"] = index
     return await send_integration_message(IntegrationMessage(plugin="google_docs", channel=document_id, message=content, metadata=metadata))
+
+# ============================================================================
+# Resource Management Endpoints
+# ============================================================================
+
+class ExportRequest(BaseModel):
+    """Request model for exporting conversation data"""
+    session_id: str
+    format: str = "json"  # json, csv, markdown
+
+class ImportRequest(BaseModel):
+    """Request model for importing conversation data"""
+    session_id: str
+    format: str = "json"  # json, csv
+    data: str
+
+class BulkDeleteRequest(BaseModel):
+    """Request model for bulk session deletion"""
+    session_ids: List[str]
+
+@app.get("/ai/sessions")
+async def list_sessions(
+    min_messages: Optional[int] = None,
+    max_messages: Optional[int] = None,
+    since: Optional[str] = None
+):
+    """
+    List all active conversation sessions with optional filtering.
+    
+    Args:
+        min_messages: Minimum number of messages in session
+        max_messages: Maximum number of messages in session
+        since: ISO timestamp - only sessions with messages since this time
+        
+    Returns:
+        List of session information
+    """
+    try:
+        sessions = session_manager.list_sessions(
+            min_messages=min_messages,
+            max_messages=max_messages,
+            since=since
+        )
+        return {
+            "sessions": sessions,
+            "count": len(sessions),
+            "total_sessions": len(conversation_history)
+        }
+    except Exception as e:
+        logger.exception(f"Error listing sessions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list sessions"
+        )
+
+@app.get("/ai/sessions/stats")
+async def get_session_stats():
+    """
+    Get statistics about all conversation sessions.
+    
+    Returns:
+        Session statistics including totals, averages, and extremes
+    """
+    try:
+        stats = session_manager.get_session_stats()
+        return stats
+    except Exception as e:
+        logger.exception(f"Error getting session stats: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get session statistics"
+        )
+
+@app.post("/ai/sessions/export")
+async def export_session(request: ExportRequest):
+    """
+    Export a conversation session in the specified format.
+    
+    Supported formats:
+    - json: JSON format
+    - csv: CSV format  
+    - markdown: Markdown format
+    
+    Returns:
+        Exported conversation data
+    """
+    if request.session_id not in conversation_history:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {request.session_id} not found"
+        )
+    
+    if request.format not in ["json", "csv", "markdown"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="format must be one of: json, csv, markdown"
+        )
+    
+    try:
+        messages = conversation_history[request.session_id]
+        
+        if request.format == "json":
+            exported_data = ConversationExporter.to_json(messages)
+            media_type = "application/json"
+        elif request.format == "csv":
+            exported_data = ConversationExporter.to_csv(messages)
+            media_type = "text/csv"
+        else:  # markdown
+            exported_data = ConversationExporter.to_markdown(messages, request.session_id)
+            media_type = "text/markdown"
+        
+        return {
+            "success": True,
+            "session_id": request.session_id,
+            "format": request.format,
+            "message_count": len(messages),
+            "data": exported_data,
+            "media_type": media_type
+        }
+    except Exception as e:
+        logger.exception(f"Error exporting session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to export session"
+        )
+
+@app.post("/ai/sessions/import")
+async def import_session(request: ImportRequest):
+    """
+    Import conversation data into a session.
+    
+    Supported formats:
+    - json: JSON format
+    - csv: CSV format
+    
+    Returns:
+        Import status and message count
+    """
+    if request.format not in ["json", "csv"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="format must be one of: json, csv"
+        )
+    
+    try:
+        if request.format == "json":
+            messages = ConversationImporter.from_json(request.data)
+        else:  # csv
+            messages = ConversationImporter.from_csv(request.data)
+        
+        # Import into conversation history
+        conversation_history[request.session_id] = messages
+        
+        return {
+            "success": True,
+            "session_id": request.session_id,
+            "format": request.format,
+            "imported_message_count": len(messages)
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception(f"Error importing session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to import session"
+        )
+
+@app.delete("/ai/sessions/bulk")
+async def delete_sessions_bulk(request: BulkDeleteRequest):
+    """
+    Delete multiple sessions in bulk.
+    
+    Returns:
+        Deletion results with counts
+    """
+    try:
+        result = session_manager.delete_multiple_sessions(request.session_ids)
+        return {
+            "success": True,
+            **result
+        }
+    except Exception as e:
+        logger.exception(f"Error in bulk delete: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete sessions"
+        )
+
+@app.delete("/ai/sessions/all")
+async def clear_all_sessions():
+    """
+    Clear all conversation sessions.
+    
+    WARNING: This operation cannot be undone.
+    
+    Returns:
+        Number of sessions cleared
+    """
+    try:
+        count = session_manager.clear_all_sessions()
+        return {
+            "success": True,
+            "message": "All sessions cleared",
+            "cleared_count": count
+        }
+    except Exception as e:
+        logger.exception(f"Error clearing all sessions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to clear sessions"
+        )
