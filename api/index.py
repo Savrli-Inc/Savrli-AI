@@ -11,6 +11,10 @@ from datetime import datetime, timezone
 from collections import defaultdict
 from pathlib import Path
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ----------------------------------------------------------------------
 # Imports – plugin system + multimodal + tools
