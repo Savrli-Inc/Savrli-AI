@@ -18,6 +18,18 @@ from integrations.discord_plugin import DiscordPlugin
 from integrations.notion_plugin import NotionPlugin
 from integrations.google_docs_plugin import GoogleDocsPlugin
 
+# Import multi-modal AI capabilities
+from ai_multimodal import (
+    MultiModalProcessor, FineTuningConfig, ModelType,
+    model_registry
+)
+
+# Import advanced AI tools
+from tools.summarizer import Summarizer
+from tools.sentiment_analysis import SentimentAnalyzer
+from tools.email_drafter import EmailDrafter
+from tools.workflow_automation import WorkflowAutomation
+
 app = FastAPI()
 logger = logging.getLogger("api")
 logging.basicConfig(level=logging.INFO)
@@ -48,6 +60,16 @@ MAX_HISTORY_PER_SESSION = int(os.getenv("MAX_HISTORY_PER_SESSION", "20"))
 
 # Initialize plugin manager and register plugins
 plugin_manager = PluginManager(ai_system=client)
+
+# Initialize multi-modal processor
+multimodal_processor = MultiModalProcessor(openai_client=client)
+
+# Initialize advanced AI tools
+summarizer = Summarizer()
+sentiment_analyzer = SentimentAnalyzer()
+email_drafter = EmailDrafter()
+workflow_automation = WorkflowAutomation()
+
 
 # Register Slack plugin
 slack_config = {
@@ -736,3 +758,539 @@ async def google_docs_append_text(document_id: str, content: str, index: Optiona
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to append text to Google Docs document"
         )
+
+# ============================================================================
+# Multi-Modal AI Endpoints
+# ============================================================================
+
+class VisionRequest(BaseModel):
+    """Request model for vision/image analysis"""
+    prompt: str
+    image_url: str
+    model: Optional[str] = "gpt-4-vision-preview"
+    max_tokens: Optional[int] = 1000
+
+class AudioRequest(BaseModel):
+    """Request model for audio transcription"""
+    audio_url: str
+    model: Optional[str] = "whisper-1"
+    language: Optional[str] = None
+
+class FineTuningRequest(BaseModel):
+    """Request model for fine-tuning configuration"""
+    model: str
+    training_file: str
+    validation_file: Optional[str] = None
+    n_epochs: Optional[int] = 3
+    batch_size: Optional[int] = None
+    learning_rate_multiplier: Optional[float] = None
+    suffix: Optional[str] = None
+
+@app.get("/ai/models")
+async def list_ai_models(model_type: Optional[str] = None):
+    """
+    List all available AI models with optional filtering by type.
+    
+    Query Parameters:
+        model_type: Optional filter by type (text, vision, audio, multimodal)
+    
+    Returns:
+        List of available models with their capabilities
+    """
+    try:
+        models = multimodal_processor.list_available_models(model_type=model_type)
+        return {
+            "models": models,
+            "count": len(models)
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception(f"Error listing models: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list models"
+        )
+
+@app.get("/ai/models/{model_id}")
+async def get_model_info(model_id: str):
+    """
+    Get detailed information about a specific AI model.
+    
+    Args:
+        model_id: Model identifier (e.g., gpt-4, gpt-3.5-turbo)
+    
+    Returns:
+        Model information including capabilities and limits
+    """
+    try:
+        model_info = multimodal_processor.get_model_info(model_id)
+        return model_info
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.exception(f"Error getting model info: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get model information"
+        )
+
+@app.post("/ai/vision")
+async def analyze_image(request: VisionRequest):
+    """
+    Analyze images using vision models.
+    
+    This endpoint uses GPT-4 Vision or other vision-capable models
+    to understand and describe images based on the provided prompt.
+    
+    Args:
+        request: Vision analysis request with prompt and image URL
+    
+    Returns:
+        Image analysis result
+    """
+    try:
+        if not request.prompt or not request.prompt.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Prompt cannot be empty"
+            )
+        
+        if not request.image_url or not request.image_url.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Image URL cannot be empty"
+            )
+        
+        result = multimodal_processor.process_vision(
+            prompt=request.prompt,
+            image_url=request.image_url,
+            model_id=request.model,
+            max_tokens=request.max_tokens
+        )
+        
+        return {
+            "success": True,
+            "result": result,
+            "model": request.model
+        }
+    
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in vision processing: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process image"
+        )
+
+@app.post("/ai/audio/transcribe")
+async def transcribe_audio(request: AudioRequest):
+    """
+    Transcribe audio using Whisper or other audio models.
+    
+    This endpoint processes audio files and returns text transcription.
+    Supports multiple languages and audio formats.
+    
+    Args:
+        request: Audio transcription request with audio URL
+    
+    Returns:
+        Audio transcription result
+    """
+    try:
+        if not request.audio_url or not request.audio_url.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Audio URL cannot be empty"
+            )
+        
+        result = multimodal_processor.process_audio(
+            audio_url=request.audio_url,
+            model_id=request.model,
+            language=request.language
+        )
+        
+        return {
+            "success": True,
+            "result": result,
+            "model": request.model
+        }
+    
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in audio transcription: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to transcribe audio"
+        )
+
+@app.post("/ai/fine-tuning/configure")
+async def configure_fine_tuning(request: FineTuningRequest):
+    """
+    Configure fine-tuning for supported models.
+    
+    This endpoint sets up fine-tuning configuration for models
+    that support custom training on your data.
+    
+    Args:
+        request: Fine-tuning configuration request
+    
+    Returns:
+        Fine-tuning configuration status
+    """
+    try:
+        config = FineTuningConfig(
+            model_id=request.model,
+            training_file=request.training_file,
+            validation_file=request.validation_file,
+            n_epochs=request.n_epochs or 3,
+            batch_size=request.batch_size,
+            learning_rate_multiplier=request.learning_rate_multiplier,
+            suffix=request.suffix
+        )
+        
+        # Validate configuration
+        is_valid, error_message = config.validate()
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error_message
+            )
+        
+        # Check if model supports fine-tuning
+        model_info = multimodal_processor.get_model_info(request.model)
+        if not model_info.get("supports_fine_tuning"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Model {request.model} does not support fine-tuning"
+            )
+        
+        return {
+            "success": True,
+            "message": "Fine-tuning configuration validated",
+            "config": config.to_dict()
+        }
+    
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error configuring fine-tuning: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to configure fine-tuning"
+        )
+
+@app.get("/ai/models/fine-tunable")
+async def list_fine_tunable_models():
+    """
+    List all models that support fine-tuning.
+    
+    Returns:
+        List of models that can be fine-tuned
+    """
+    try:
+        models = model_registry.list_models(supports_fine_tuning=True)
+        return {
+            "models": models,
+            "count": len(models)
+        }
+    except Exception as e:
+        logger.exception(f"Error listing fine-tunable models: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list fine-tunable models"
+        )
+
+
+# ============================================================================
+# Advanced AI Tools Endpoints
+# ============================================================================
+
+class SummarizeRequest(BaseModel):
+    """Request model for text summarization"""
+    text: str
+    max_length: Optional[int] = 128
+    style: Optional[str] = "concise"  # concise, detailed, bullet_points
+
+class SentimentRequest(BaseModel):
+    """Request model for sentiment analysis"""
+    text: str
+    detailed: Optional[bool] = False
+
+class EmailDraftRequest(BaseModel):
+    """Request model for email drafting"""
+    purpose: str
+    recipient: Optional[str] = None
+    tone: Optional[str] = "professional"
+    key_points: Optional[List[str]] = None
+    length: Optional[str] = "medium"
+    context: Optional[str] = None
+
+class WorkflowRequest(BaseModel):
+    """Request model for workflow suggestions"""
+    task_description: str
+    constraints: Optional[List[str]] = None
+    tools_available: Optional[List[str]] = None
+
+@app.post("/ai/tools/summarize")
+async def summarize_text(request: SummarizeRequest):
+    """
+    Summarize text using AI.
+    
+    This endpoint uses AI to create concise summaries of longer texts.
+    Supports different summarization styles and length controls.
+    
+    Args:
+        request: Summarization request with text and options
+    
+    Returns:
+        Text summary with metadata
+    """
+    try:
+        if not request.text or not request.text.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Text cannot be empty"
+            )
+        
+        if request.max_length < 10 or request.max_length > 1000:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="max_length must be between 10 and 1000"
+            )
+        
+        if request.style not in ["concise", "detailed", "bullet_points"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="style must be one of: concise, detailed, bullet_points"
+            )
+        
+        result = summarizer.summarize(
+            text=request.text,
+            max_length=request.max_length,
+            style=request.style
+        )
+        
+        if result.get("status") == "error":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("error", "Summarization failed")
+            )
+        
+        return result
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in text summarization: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to summarize text"
+        )
+
+@app.post("/ai/tools/sentiment")
+async def analyze_sentiment(request: SentimentRequest):
+    """
+    Analyze sentiment of text.
+    
+    This endpoint analyzes text to determine sentiment (positive, negative, neutral)
+    and can provide detailed emotional analysis.
+    
+    Args:
+        request: Sentiment analysis request
+    
+    Returns:
+        Sentiment analysis results with scores and emotions
+    """
+    try:
+        if not request.text or not request.text.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Text cannot be empty"
+            )
+        
+        result = sentiment_analyzer.analyze_sentiment(
+            text=request.text,
+            detailed=request.detailed
+        )
+        
+        if result.get("status") == "error":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("error", "Sentiment analysis failed")
+            )
+        
+        return result
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in sentiment analysis: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to analyze sentiment"
+        )
+
+@app.post("/ai/tools/email/draft")
+async def draft_email(request: EmailDraftRequest):
+    """
+    Generate an email draft using AI.
+    
+    This endpoint creates professional email drafts based on purpose,
+    tone, and key points. Useful for quick email composition.
+    
+    Args:
+        request: Email drafting request
+    
+    Returns:
+        Email draft with subject and body
+    """
+    try:
+        if not request.purpose or not request.purpose.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email purpose cannot be empty"
+            )
+        
+        if request.tone not in ["professional", "casual", "friendly", "formal"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="tone must be one of: professional, casual, friendly, formal"
+            )
+        
+        if request.length not in ["short", "medium", "long"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="length must be one of: short, medium, long"
+            )
+        
+        result = email_drafter.draft_email(
+            purpose=request.purpose,
+            recipient=request.recipient,
+            tone=request.tone,
+            key_points=request.key_points,
+            length=request.length,
+            context=request.context
+        )
+        
+        if result.get("status") == "error":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("error", "Email drafting failed")
+            )
+        
+        return result
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in email drafting: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to draft email"
+        )
+
+@app.post("/ai/tools/workflow/suggest")
+async def suggest_workflow(request: WorkflowRequest):
+    """
+    Get AI-suggested workflow for a task.
+    
+    This endpoint analyzes a task description and suggests an optimal
+    workflow with steps, considering constraints and available tools.
+    
+    Args:
+        request: Workflow suggestion request
+    
+    Returns:
+        Suggested workflow with steps and details
+    """
+    try:
+        if not request.task_description or not request.task_description.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Task description cannot be empty"
+            )
+        
+        result = workflow_automation.suggest_workflow(
+            task_description=request.task_description,
+            constraints=request.constraints,
+            tools_available=request.tools_available
+        )
+        
+        if result.get("status") == "error":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result.get("error", "Workflow suggestion failed")
+            )
+        
+        return result
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in workflow suggestion: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to suggest workflow"
+        )
+
+@app.get("/ai/tools")
+async def list_ai_tools():
+    """
+    List all available AI tools and their capabilities.
+    
+    Returns:
+        List of available AI tools with descriptions
+    """
+    return {
+        "tools": [
+            {
+                "name": "summarize",
+                "endpoint": "/ai/tools/summarize",
+                "description": "Summarize text with configurable length and style",
+                "capabilities": ["concise summary", "detailed summary", "bullet points"]
+            },
+            {
+                "name": "sentiment",
+                "endpoint": "/ai/tools/sentiment",
+                "description": "Analyze sentiment and emotions in text",
+                "capabilities": ["sentiment detection", "emotion analysis", "tone identification"]
+            },
+            {
+                "name": "email_draft",
+                "endpoint": "/ai/tools/email/draft",
+                "description": "Generate professional email drafts",
+                "capabilities": ["email composition", "tone adjustment", "multi-style support"]
+            },
+            {
+                "name": "workflow",
+                "endpoint": "/ai/tools/workflow/suggest",
+                "description": "Suggest optimal workflows for tasks",
+                "capabilities": ["workflow planning", "task optimization", "automation suggestions"]
+            }
+        ],
+        "count": 4
+    }
