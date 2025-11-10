@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, status, File, UploadFile
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from openai import OpenAI
 import os
@@ -525,5 +526,43 @@ async def root():
 async def playground():
     path = Path(__file__).parent.parent / "pages" / "playground.html"
     return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Playground not found"
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo():
+    """Serve the demo page for manual testing"""
+    path = Path(__file__).parent.parent / "pages" / "demo.html"
+    return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Demo page not found"
+
+@app.post("/resources/upload")
+async def upload_resource(file: UploadFile = File(...)):
+    """
+    Simple resource upload endpoint for demo purposes.
+    Accepts files and returns metadata.
+    """
+    try:
+        # Read file content
+        content = await file.read()
+        file_size = len(content)
+        
+        # Return file metadata
+        return {
+            "success": True,
+            "filename": file.filename,
+            "content_type": file.content_type,
+            "size": file_size,
+            "size_formatted": f"{file_size / 1024:.2f} KB" if file_size > 1024 else f"{file_size} bytes",
+            "message": f"File '{file.filename}' uploaded successfully"
+        }
+    except Exception as e:
+        logger.exception("Upload error: %s", e)
+        raise HTTPException(status_code=500, detail="File upload failed")
+
+# Mount static files directory
+try:
+    static_path = Path(__file__).parent.parent / "static"
+    if static_path.exists():
+        app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+except Exception as e:
+    logger.warning("Could not mount static files: %s", e)
 
 # ... [rest of tools, integrations, export/import, etc. – unchanged from main]
