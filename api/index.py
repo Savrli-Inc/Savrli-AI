@@ -357,6 +357,19 @@ async def clear_conversation_history(session_id: str):
 async def root():
     return {"message": "Savrli AI Chat API is running!"}
 
+@app.get("/hello")
+async def hello():
+    """
+    Simple hello endpoint for testing and health checks.
+    
+    Returns a friendly greeting message to confirm the API is responsive.
+    This endpoint requires no authentication and can be used for:
+    - Basic health checks
+    - API availability testing
+    - Quick connectivity verification
+    """
+    return {"message": "Hello from Savrli AI!"}
+
 @app.get("/playground", response_class=HTMLResponse)
 async def playground():
     """
