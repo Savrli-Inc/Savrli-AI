@@ -1,0 +1,112 @@
+# GitHub Labels Configuration
+# This file defines the labels used in the Savrli AI repository to help organize issues and PRs
+
+# New Contributor Labels
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for newcomers - well-scoped issues suitable for first-time contributors"
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed - seeking community contributions"
+
+- name: "First Issue"
+  color: "7057ff"
+  description: "Beginner-friendly issues with mentorship available"
+
+# Priority Labels
+- name: "priority:high"
+  color: "d73a4a"
+  description: "High priority - should be addressed soon"
+
+- name: "priority:medium"
+  color: "fbca04"
+  description: "Medium priority - important but not urgent"
+
+- name: "priority:low"
+  color: "0e8a16"
+  description: "Low priority - nice to have"
+
+# Type Labels
+- name: "bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: "feature"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "enhancement"
+  color: "84b6eb"
+  description: "Improvement to existing functionality"
+
+- name: "documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "question"
+  color: "d876e3"
+  description: "Further information is requested"
+
+# Area Labels
+- name: "area:api"
+  color: "c5def5"
+  description: "Related to API endpoints and functionality"
+
+- name: "area:integration"
+  color: "c5def5"
+  description: "Related to third-party platform integrations"
+
+- name: "area:testing"
+  color: "c5def5"
+  description: "Related to tests and test coverage"
+
+- name: "area:docs"
+  color: "c5def5"
+  description: "Related to documentation"
+
+- name: "area:deployment"
+  color: "c5def5"
+  description: "Related to deployment and infrastructure"
+
+# Status Labels
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+
+- name: "invalid"
+  color: "e4e669"
+  description: "This doesn't seem right"
+
+- name: "needs-triage"
+  color: "fbca04"
+  description: "Needs to be reviewed and categorized"
+
+- name: "in-progress"
+  color: "0e8a16"
+  description: "Currently being worked on"
+
+- name: "blocked"
+  color: "b60205"
+  description: "Blocked by other issues or external factors"
+
+# Special Labels
+- name: "breaking-change"
+  color: "d93f0b"
+  description: "Changes that break backward compatibility"
+
+- name: "security"
+  color: "b60205"
+  description: "Security-related issue or improvement"
+
+- name: "performance"
+  color: "fef2c0"
+  description: "Performance improvement or issue"
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "Pull requests that update a dependency file"
