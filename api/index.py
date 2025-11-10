@@ -353,6 +353,271 @@ async def clear_conversation_history(session_id: str):
         return {"message": f"History cleared for session {session_id}"}
     return {"message": f"No history found for session {session_id}"}
 
+# ============================================================================
+# Vision/Multimodal Endpoints
+# ============================================================================
+
+class VisionRequest(BaseModel):
+    """Request model for vision/image analysis"""
+    image_url: str
+    prompt: str
+    max_tokens: Optional[int] = None
+    model: Optional[str] = "gpt-4-vision-preview"
+    session_id: Optional[str] = None
+
+class ImageGenerationRequest(BaseModel):
+    """Request model for image generation"""
+    prompt: str
+    n: Optional[int] = 1
+    size: Optional[str] = "1024x1024"
+    quality: Optional[str] = "standard"
+    model: Optional[str] = "dall-e-3"
+    session_id: Optional[str] = None
+
+class AudioTranscriptionRequest(BaseModel):
+    """Request model for audio transcription"""
+    audio_url: str
+    model: Optional[str] = "whisper-1"
+    language: Optional[str] = None
+    prompt: Optional[str] = None
+    session_id: Optional[str] = None
+
+@app.post("/ai/vision")
+async def vision_endpoint(request: VisionRequest):
+    """
+    Analyze images using GPT-4 Vision.
+    
+    This endpoint accepts an image URL and a prompt, then uses GPT-4 Vision
+    to analyze the image and provide a description or answer questions about it.
+    
+    Args:
+        request: VisionRequest with image_url and prompt
+        
+    Returns:
+        Analysis result from GPT-4 Vision
+    """
+    if not request.prompt.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Prompt cannot be empty"
+        )
+    
+    if not request.image_url.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Image URL cannot be empty"
+        )
+    
+    max_tokens = request.max_tokens if request.max_tokens is not None else 300
+    if max_tokens <= 0 or max_tokens > 2000:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="max_tokens must be between 1 and 2000"
+        )
+    
+    try:
+        def call_vision_api():
+            return client.chat.completions.create(
+                model=request.model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": request.prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": request.image_url
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=max_tokens
+            )
+        
+        response = await asyncio.to_thread(call_vision_api)
+        
+        # Parse response
+        if not response.choices or len(response.choices) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="AI returned an empty response"
+            )
+        
+        content = response.choices[0].message.content
+        if not content:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Unexpected AI response format"
+            )
+        
+        result = {
+            "response": content.strip(),
+            "image_url": request.image_url,
+            "session_id": request.session_id
+        }
+        
+        # Store in history if session_id provided
+        if request.session_id:
+            conversation_history[request.session_id].append({
+                "role": "user",
+                "content": f"[Image: {request.image_url}] {request.prompt}",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            conversation_history[request.session_id].append({
+                "role": "assistant",
+                "content": content.strip(),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            trim_conversation_history(request.session_id)
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error calling Vision API: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Vision API temporarily unavailable"
+        )
+
+@app.post("/ai/image/generate")
+async def image_generate_endpoint(request: ImageGenerationRequest):
+    """
+    Generate images using DALL-E.
+    
+    This endpoint generates images from text descriptions using OpenAI's
+    DALL-E model.
+    
+    Args:
+        request: ImageGenerationRequest with prompt and parameters
+        
+    Returns:
+        Generated image URL(s) and metadata
+    """
+    if not request.prompt.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Prompt cannot be empty"
+        )
+    
+    # Validate n parameter
+    if request.n <= 0 or request.n > 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="n must be between 1 and 10"
+        )
+    
+    # Validate size parameter
+    valid_sizes = ["256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"]
+    if request.size not in valid_sizes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"size must be one of: {', '.join(valid_sizes)}"
+        )
+    
+    # Validate quality parameter
+    if request.quality not in ["standard", "hd"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="quality must be 'standard' or 'hd'"
+        )
+    
+    try:
+        def call_dalle():
+            return client.images.generate(
+                model=request.model,
+                prompt=request.prompt,
+                n=request.n,
+                size=request.size,
+                quality=request.quality
+            )
+        
+        response = await asyncio.to_thread(call_dalle)
+        
+        # Parse response
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Image generation returned no results"
+            )
+        
+        images = [{"url": img.url, "revised_prompt": getattr(img, 'revised_prompt', None)} 
+                  for img in response.data]
+        
+        result = {
+            "images": images,
+            "prompt": request.prompt,
+            "model": request.model,
+            "session_id": request.session_id
+        }
+        
+        # Store in history if session_id provided
+        if request.session_id:
+            conversation_history[request.session_id].append({
+                "role": "user",
+                "content": f"[Generate Image] {request.prompt}",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            conversation_history[request.session_id].append({
+                "role": "assistant",
+                "content": f"[Generated {len(images)} image(s)]",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            trim_conversation_history(request.session_id)
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error generating image: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Image generation temporarily unavailable"
+        )
+
+@app.post("/ai/audio/transcribe")
+async def audio_transcribe_endpoint(request: AudioTranscriptionRequest):
+    """
+    Transcribe audio using Whisper.
+    
+    This endpoint transcribes audio files to text using OpenAI's Whisper model.
+    Note: This is a simplified version that accepts audio URLs. For file uploads,
+    use multipart/form-data with a separate endpoint.
+    
+    Args:
+        request: AudioTranscriptionRequest with audio_url and parameters
+        
+    Returns:
+        Transcription text and metadata
+    """
+    if not request.audio_url.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Audio URL cannot be empty"
+        )
+    
+    try:
+        # Note: This is a simplified implementation
+        # In production, you'd download the audio file and use client.audio.transcriptions.create
+        # For now, we'll return a helpful message
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Audio transcription requires file upload. Use multipart/form-data endpoint (coming soon)"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error transcribing audio: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Audio transcription temporarily unavailable"
+        )
+
 @app.get("/")
 async def root():
     return {"message": "Savrli AI Chat API is running!"}
