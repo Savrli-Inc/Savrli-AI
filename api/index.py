@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, status, File, UploadFile
 from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from openai import OpenAI
 import os
@@ -37,6 +38,9 @@ from tools.workflow_automation import WorkflowAutomation
 from resource_manager import (
     ConversationExporter, ConversationImporter, SessionManager
 )
+
+# Import resources router
+from .resources import router as resources_router
 
 # ----------------------------------------------------------------------
 # Logging
@@ -152,6 +156,18 @@ async def lifespan(app: FastAPI):
     logger.info("Server shutting down")
 
 app = FastAPI(lifespan=lifespan)
+
+# ----------------------------------------------------------------------
+# Mount static files
+# ----------------------------------------------------------------------
+static_path = Path(__file__).parent.parent / "static"
+if static_path.exists():
+    app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
+# ----------------------------------------------------------------------
+# Include routers
+# ----------------------------------------------------------------------
+app.include_router(resources_router)
 
 # ----------------------------------------------------------------------
 # Helpers
@@ -525,5 +541,10 @@ async def root():
 async def playground():
     path = Path(__file__).parent.parent / "pages" / "playground.html"
     return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Playground not found"
+
+@app.get("/resources", response_class=HTMLResponse)
+async def resources_page():
+    path = Path(__file__).parent.parent / "pages" / "resources.html"
+    return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Resources page not found"
 
 # ... [rest of tools, integrations, export/import, etc. – unchanged from main]
