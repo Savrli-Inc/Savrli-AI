@@ -38,6 +38,9 @@ from resource_manager import (
     ConversationExporter, ConversationImporter, SessionManager
 )
 
+# Import resource tools router
+from api.resource_tools import router as resource_tools_router
+
 # ----------------------------------------------------------------------
 # Logging
 # ----------------------------------------------------------------------
@@ -152,6 +155,9 @@ async def lifespan(app: FastAPI):
     logger.info("Server shutting down")
 
 app = FastAPI(lifespan=lifespan)
+
+# Include resource tools router
+app.include_router(resource_tools_router)
 
 # ----------------------------------------------------------------------
 # Helpers
