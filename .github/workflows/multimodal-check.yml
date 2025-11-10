@@ -26,10 +26,17 @@ on:
       - 'tests/test_multimodal.py'
       - 'requirements.txt'
 
+# Limit permissions for security (CodeQL recommendation)
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Run Multimodal Tests
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
     
     # TODO: Consider adding a build matrix to test on multiple Python versions
     # strategy:
@@ -82,6 +89,9 @@ jobs:
   lint:
     name: Lint Multimodal Code
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
