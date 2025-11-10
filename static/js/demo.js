@@ -1,216 +1,279 @@
 /**
  * Savrli AI Demo Page JavaScript
  * Handles API interactions for chat and resource upload endpoints
+ * Provides a clean, responsive test harness with loading states and raw JSON
  */
 
-// API Configuration
+// API base URL - defaults to current origin
 const API_BASE = window.location.origin;
 const CHAT_ENDPOINT = `${API_BASE}/ai/chat`;
-const UPLOAD_ENDPOINT = `${API_BASE}/resources/upload`;
+const UPLOAD_ENDPOINT = `${API_BASE}/api/resources/upload`;
 
 /**
- * Initialize demo page event listeners
+ * Initialize the demo page when DOM is loaded
  */
-document.addEventListener('DOMContentLoaded', function() {
-    // Chat demo buttons
-    const chatButtons = document.querySelectorAll('.chat-demo-btn');
-    chatButtons.forEach(btn => {
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Savrli AI Demo initialized');
+    setupEventListeners();
+});
+
+/**
+ * Setup event listeners for all interactive elements
+ */
+function setupEventListeners() {
+    // Chat API buttons (quick test)
+    document.querySelectorAll('.chat-demo-btn').forEach(btn => {
         btn.addEventListener('click', handleChatDemo);
     });
 
-    // Upload demo button
+    // Custom chat form
+    const customChatForm = document.getElementById('custom-chat-form');
+    if (customChatForm) {
+        customChatForm.addEventListener('submit', handleCustomChat);
+    }
+
+    // Upload API button
     const uploadBtn = document.getElementById('upload-demo-btn');
     if (uploadBtn) {
         uploadBtn.addEventListener('click', handleUploadDemo);
     }
 
-    // File input change handler
-    const fileInput = document.getElementById('file-upload');
+    // File input change (for metadata preview)
+    const fileInput = document.getElementById('file-input') || document.getElementById('file-upload');
     if (fileInput) {
         fileInput.addEventListener('change', handleFileSelect);
     }
-});
+}
 
 /**
- * Handle chat demo button clicks
+ * Handle quick test button clicks
  */
 async function handleChatDemo(event) {
-    const button = event.target;
+    const button = event.target.closest('button');
     const prompt = button.dataset.prompt;
-    const responseContainer = document.getElementById('chat-response');
-    const loadingIndicator = document.getElementById('loading-indicator');
+    const sessionId = button.dataset.sessionId || null;
 
     if (!prompt) {
-        showError('No prompt defined for this button');
+        displayError('No prompt found for this button');
         return;
     }
 
-    // Show loading state
-    button.disabled = true;
-    if (loadingIndicator) loadingIndicator.style.display = 'block';
-    if (responseContainer) {
-        responseContainer.textContent = 'Generating response...';
-        responseContainer.className = 'response-container loading';
-    }
-
+    displayLoading('chat-output');
     try {
-        const response = await fetch(CHAT_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                prompt: prompt,
-                max_tokens: 500,
-                temperature: 0.7
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Chat request failed');
-        }
-
-        const data = await response.json();
-        displayChatResponse(data.response);
-
+        const response = await callChatAPI(prompt, sessionId);
+        displayChatResponse(response);
     } catch (error) {
-        console.error('Chat error:', error);
-        showError(`Chat failed: ${error.message}`);
-    } finally {
-        button.disabled = false;
-        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        displayError(`Chat API Error: ${error.message}`);
     }
 }
 
 /**
- * TODO: Implement streaming response rendering
- * 
- * To support streaming responses:
- * 1. Add stream: true to the request body
- * 2. Use EventSource or fetch with ReadableStream
- * 3. Parse Server-Sent Events (SSE) format
- * 4. Progressively update the response container
- * 
- * Example implementation:
- * 
- * const response = await fetch(CHAT_ENDPOINT, {
- *     method: 'POST',
- *     headers: { 'Content-Type': 'application/json' },
- *     body: JSON.stringify({ prompt: prompt, stream: true })
- * });
- * 
- * const reader = response.body.getReader();
- * const decoder = new TextDecoder();
- * 
- * while (true) {
- *     const { done, value } = await reader.read();
- *     if (done) break;
- *     
- *     const chunk = decoder.decode(value);
- *     const lines = chunk.split('\n\n');
- *     
- *     for (const line of lines) {
- *         if (line.startsWith('data: ')) {
- *             const data = JSON.parse(line.slice(6));
- *             if (data.content) {
- *                 appendToResponse(data.content);
- *             }
- *         }
- *     }
- * }
+ * Handle custom chat form submission
  */
+async function handleCustomChat(event) {
+    event.preventDefault();
 
-/**
- * Display chat response in the UI
- */
-function displayChatResponse(text) {
-    const responseContainer = document.getElementById('chat-response');
-    if (responseContainer) {
-        responseContainer.textContent = text;
-        responseContainer.className = 'response-container success';
+    const promptInput = document.getElementById('custom-prompt');
+    const sessionInput = document.getElementById('custom-session-id');
+
+    const prompt = promptInput.value.trim();
+    const sessionId = sessionInput.value.trim() || null;
+
+    if (!prompt) {
+        displayError('Please enter a prompt');
+        return;
+    }
+
+    displayLoading('chat-output');
+    try {
+        const response = await callChatAPI(prompt, sessionId);
+        displayChatResponse(response);
+        promptInput.value = ''; // Clear input
+    } catch (error) {
+        displayError(`Chat API Error: ${error.message}`);
     }
 }
 
 /**
- * Handle file upload demo
+ * Call the /ai/chat API endpoint
+ */
+async function callChatAPI(prompt, sessionId = null) {
+    const requestBody = { prompt };
+    if (sessionId) requestBody.session_id = sessionId;
+
+    const response = await fetch(CHAT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+    }
+    return await response.json();
+}
+
+/**
+ * Handle upload demo button click
  */
 async function handleUploadDemo() {
-    const fileInput = document.getElementById('file-upload');
-    const uploadResponse = document.getElementById('upload-response');
-    const loadingIndicator = document.getElementById('upload-loading');
-    const uploadBtn = document.getElementById('upload-demo-btn');
+    const fileInput = document.getElementById('file-input') || document.getElementById('file-upload');
+    const file = fileInput?.files[0];
 
-    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        showError('Please select a file to upload');
+    if (!file) {
+        displayError('Please select a file to upload');
         return;
     }
 
-    const file = fileInput.files[0];
+    displayLoading('upload-output');
+    try {
+        const response = await callUploadAPI(file);
+        displayUploadResponse(response);
+    } catch (error) {
+        displayError(`Upload API Error: ${error.message}`, 'upload-output');
+    }
+}
+
+/**
+ * Call the /api/resources/upload API endpoint
+ */
+async function callUploadAPI(file) {
     const formData = new FormData();
     formData.append('file', file);
 
-    // Show loading state
-    if (uploadBtn) uploadBtn.disabled = true;
-    if (loadingIndicator) loadingIndicator.style.display = 'block';
-    if (uploadResponse) {
-        uploadResponse.textContent = 'Uploading file...';
-        uploadResponse.className = 'response-container loading';
+    const response = await fetch(UPLOAD_ENDPOINT, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
     }
-
-    try {
-        const response = await fetch(UPLOAD_ENDPOINT, {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Upload failed');
-        }
-
-        const data = await response.json();
-        displayUploadResponse(data);
-
-    } catch (error) {
-        console.error('Upload error:', error);
-        showError(`Upload failed: ${error.message}`);
-    } finally {
-        if (uploadBtn) uploadBtn.disabled = false;
-        if (loadingIndicator) loadingIndicator.style.display = 'none';
-    }
+    return await response.json();
 }
 
 /**
- * Display upload response in the UI
+ * Display loading state
+ */
+function displayLoading(outputId) {
+    const output = document.getElementById(outputId);
+    if (!output) return;
+
+    output.innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Processing request...</p>
+        </div>
+    `;
+    output.classList.remove('error');
+    output.classList.add('loading-state');
+}
+
+/**
+ * Display chat API response
+ */
+function displayChatResponse(data) {
+    const output = document.getElementById('chat-output');
+    if (!output) return;
+
+    output.classList.remove('loading-state', 'error');
+
+    const responseText = data.response || 'No response text';
+    const sessionId = data.session_id || 'None';
+
+    output.innerHTML = `
+        <div class="response-container">
+            <div class="response-metadata">
+                <span class="metadata-label">Session ID:</span>
+                <span class="metadata-value">${escapeHtml(sessionId)}</span>
+            </div>
+            <div class="response-text">
+                <h3>Response:</h3>
+                <div class="response-content">${escapeHtml(responseText)}</div>
+            </div>
+            <div class="response-raw">
+                <details>
+                    <summary>Raw JSON Response</summary>
+                    <pre><code>${escapeHtml(JSON.stringify(data, null, 2))}</code></pre>
+                </details>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Display upload API response
  */
 function displayUploadResponse(data) {
-    const uploadResponse = document.getElementById('upload-response');
-    if (uploadResponse) {
-        uploadResponse.textContent = JSON.stringify(data, null, 2);
-        uploadResponse.className = 'response-container success';
-    }
+    const output = document.getElementById('upload-output');
+    if (!output) return;
+
+    output.classList.remove('loading-state', 'error');
+
+    output.innerHTML = `
+        <div class="response-container">
+            <div class="response-text">
+                <h3>Upload Result:</h3>
+                <div class="response-content">
+                    ${data.message || 'File uploaded successfully'}
+                </div>
+                ${data.file_info ? `
+                    <div class="file-info">
+                        <p><strong>Filename:</strong> ${escapeHtml(data.file_info.filename)}</p>
+                        <p><strong>Size:</strong> ${formatBytes(data.file_info.size)}</p>
+                        <p><strong>Type:</strong> ${escapeHtml(data.file_info.content_type || 'N/A')}</p>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="response-raw">
+                <details>
+                    <summary>Raw JSON Response</summary>
+                    <pre><code>${escapeHtml(JSON.stringify(data, null, 2))}</code></pre>
+                </details>
+            </div>
+        </div>
+    `;
 }
 
 /**
- * Handle file selection
+ * Display error message
+ */
+function displayError(message, outputId = 'chat-output') {
+    const output = document.getElementById(outputId);
+    if (!output) return;
+
+    output.classList.remove('loading-state');
+    output.classList.add('error');
+
+    output.innerHTML = `
+        <div class="error-container">
+            <h3>Error</h3>
+            <p>${escapeHtml(message)}</p>
+        </div>
+    `;
+}
+
+/**
+ * Handle file selection (preview)
  */
 function handleFileSelect(event) {
     const fileInput = event.target;
+    const file = fileInput.files[0];
     const fileInfo = document.getElementById('file-info');
-    
-    if (fileInput.files && fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        if (fileInfo) {
-            fileInfo.textContent = `Selected: ${file.name} (${formatFileSize(file.size)})`;
-        }
+
+    if (file && fileInfo) {
+        fileInfo.textContent = `Selected: ${file.name} (${formatBytes(file.size)})`;
+    } else if (fileInfo) {
+        fileInfo.textContent = 'No file selected';
     }
 }
 
 /**
- * Format file size for display
+ * Format bytes to human-readable size
  */
-function formatFileSize(bytes) {
+function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -219,22 +282,10 @@ function formatFileSize(bytes) {
 }
 
 /**
- * Show error message
+ * Escape HTML to prevent XSS
  */
-function showError(message) {
-    const chatResponse = document.getElementById('chat-response');
-    const uploadResponse = document.getElementById('upload-response');
-    
-    const errorMessage = `Error: ${message}`;
-    
-    if (chatResponse && chatResponse.textContent.includes('Generating')) {
-        chatResponse.textContent = errorMessage;
-        chatResponse.className = 'response-container error';
-    } else if (uploadResponse && uploadResponse.textContent.includes('Uploading')) {
-        uploadResponse.textContent = errorMessage;
-        uploadResponse.className = 'response-container error';
-    } else {
-        console.error(errorMessage);
-        alert(errorMessage);
-    }
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
