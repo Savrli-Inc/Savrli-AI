@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Savrli AI Playground - Interactive Demo</title>
+    
+    <!-- Markdown and Syntax Highlighting Libraries -->
+    <!-- Marked.js for parsing markdown from AI responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <!-- Highlight.js for syntax highlighting code blocks -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    
     <style>
         /* 
          * Savrli AI Playground Stylesheet
@@ -407,8 +415,54 @@
         .message-content {
             color: var(--text-secondary);
             line-height: 1.6;
-            white-space: pre-wrap;
             word-wrap: break-word;
+        }
+        
+        /* Markdown and Code Block Styling */
+        /* These styles ensure code blocks and markdown are rendered beautifully */
+        .message-content pre {
+            background: var(--background);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            overflow-x: auto;
+            margin: var(--spacing-sm) 0;
+        }
+        
+        .message-content code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .message-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            display: block;
+        }
+        
+        .message-content code:not(pre code) {
+            background: var(--surface-light);
+            padding: 0.125rem 0.375rem;
+            border-radius: var(--radius-sm);
+            color: var(--primary-color);
+        }
+        
+        .message-content p {
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .message-content ul, .message-content ol {
+            margin-left: var(--spacing-lg);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .message-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: var(--spacing-md);
+            margin: var(--spacing-sm) 0;
+            color: var(--text-muted);
+            font-style: italic;
         }
         
         .empty-state {
@@ -647,6 +701,150 @@
             background: var(--border-color);
         }
         
+        /* Mode Tabs */
+        .mode-tabs {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-xl);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0;
+        }
+        
+        .mode-tab {
+            padding: var(--spacing-sm) var(--spacing-lg);
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .mode-tab:hover {
+            color: var(--text-primary);
+            background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .mode-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        
+        .mode-panel {
+            display: none;
+        }
+        
+        .mode-panel.active {
+            display: block;
+        }
+        
+        /* Image Upload Area */
+        .image-upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            text-align: center;
+            background: var(--surface-light);
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .image-upload-area:hover {
+            border-color: var(--primary-color);
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .image-upload-area.has-image {
+            padding: 0;
+            border-style: solid;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: var(--radius-lg);
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-sm);
+            opacity: 0.5;
+        }
+        
+        .upload-text {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        /* Image Gallery */
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+        
+        .gallery-image {
+            position: relative;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: var(--surface-light);
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+        
+        .gallery-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+        }
+        
+        .gallery-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .image-actions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+            padding: var(--spacing-sm);
+            display: flex;
+            gap: var(--spacing-xs);
+            opacity: 0;
+            transition: var(--transition);
+        }
+        
+        .gallery-image:hover .image-actions {
+            opacity: 1;
+        }
+        
+        .image-action-btn {
+            flex: 1;
+            padding: var(--spacing-xs);
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: var(--radius-sm);
+            color: white;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .image-action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
         /* Responsive Design */
         @media (max-width: 767px) {
             .header-content {
@@ -710,17 +908,30 @@
         <!-- Info Banner -->
         <div class="info-banner">
             <h2>🚀 Welcome to Savrli AI Interactive Demo</h2>
-            <p>Test our AI capabilities in real-time with an enhanced dashboard featuring live stats, interactive charts, and quick actions.</p>
+            <p>Test our AI capabilities in real-time with an enhanced dashboard featuring live stats, interactive charts, and multimodal AI features.</p>
             <ul class="feature-list">
                 <li>Multiple AI Models</li>
                 <li>Conversation History</li>
-                <li>Custom Parameters</li>
+                <li>Vision & Image Analysis</li>
+                <li>Image Generation (DALL-E)</li>
                 <li>Real-time Streaming</li>
                 <li>Usage Analytics</li>
                 <li>Export Conversations</li>
-                <li>Quick Action Buttons</li>
                 <li>Keyboard Shortcuts (⌘K, ⌘E, ⌘⇧C)</li>
             </ul>
+        </div>
+        
+        <!-- Mode Tabs -->
+        <div class="mode-tabs" role="tablist" aria-label="AI Mode Selection">
+            <button class="mode-tab active" onclick="switchMode('chat')" role="tab" aria-selected="true" aria-controls="chat-panel">
+                💬 Chat
+            </button>
+            <button class="mode-tab" onclick="switchMode('vision')" role="tab" aria-selected="false" aria-controls="vision-panel">
+                👁️ Vision
+            </button>
+            <button class="mode-tab" onclick="switchMode('image-gen')" role="tab" aria-selected="false" aria-controls="image-gen-panel">
+                🎨 Image Generation
+            </button>
         </div>
 
         <!-- Dashboard Stats -->
@@ -755,11 +966,13 @@
             </div>
         </div>
 
-        <!-- Playground Grid -->
-        <div class="playground">
-            <!-- Left Panel: Input & Settings -->
-            <div class="card">
-                <h3 class="card-title">Configuration</h3>
+        <!-- Chat Mode Panel -->
+        <div id="chat-panel" class="mode-panel active" role="tabpanel" aria-labelledby="chat-tab">
+            <!-- Playground Grid -->
+            <div class="playground">
+                <!-- Left Panel: Input & Settings -->
+                <div class="card">
+                    <h3 class="card-title">Configuration</h3>
                 
                 <!-- Model Selection -->
                 <div class="settings-group">
@@ -882,6 +1095,144 @@
                 </div>
             </div>
         </div>
+        </div>
+        <!-- End Chat Mode Panel -->
+
+        <!-- Vision Mode Panel -->
+        <div id="vision-panel" class="mode-panel" role="tabpanel" aria-labelledby="vision-tab">
+            <div class="playground">
+                <!-- Left Panel: Image Upload -->
+                <div class="card">
+                    <h3 class="card-title">Image Analysis</h3>
+                    
+                    <div class="settings-group">
+                        <label>Upload or Enter Image URL</label>
+                        <div id="visionImageUpload" class="image-upload-area" onclick="document.getElementById('visionImageUrl').focus()">
+                            <div id="visionUploadPlaceholder">
+                                <div class="upload-icon">🖼️</div>
+                                <div class="upload-text">Enter image URL below</div>
+                            </div>
+                            <img id="visionPreviewImage" class="preview-image" style="display: none;" alt="Preview">
+                        </div>
+                        <input type="text" id="visionImageUrl" placeholder="https://example.com/image.jpg" style="margin-top: var(--spacing-sm);">
+                        <button onclick="loadVisionPreview()" class="btn-secondary" style="margin-top: var(--spacing-xs); width: 100%;">Load Preview</button>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label for="visionPrompt">What would you like to know about this image?</label>
+                        <textarea id="visionPrompt" placeholder="Describe this image in detail..." style="min-height: 100px; width: 100%; padding: var(--spacing-sm); background: var(--surface-light); border: 1px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>Quick Questions</label>
+                        <div class="quick-actions">
+                            <button class="quick-action-btn" onclick="setVisionPrompt('Describe this image in detail')">📝 Describe</button>
+                            <button class="quick-action-btn" onclick="setVisionPrompt('What objects can you see?')">🔍 Objects</button>
+                            <button class="quick-action-btn" onclick="setVisionPrompt('What is the mood or atmosphere?')">🎭 Mood</button>
+                            <button class="quick-action-btn" onclick="setVisionPrompt('Read any text in this image')">📖 OCR</button>
+                        </div>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button id="visionSubmitBtn" class="btn-primary" onclick="analyzeVision()">
+                            <span id="visionBtnText">Analyze Image</span>
+                        </button>
+                        <button class="btn-secondary" onclick="clearVisionInput()">Clear</button>
+                    </div>
+                </div>
+                
+                <!-- Right Panel: Results -->
+                <div class="card">
+                    <h3 class="card-title">Analysis Result</h3>
+                    <div id="visionTypingIndicator" class="typing-indicator">
+                        <span>Analyzing image</span>
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                    <div id="visionOutput" class="output-panel">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">👁️</div>
+                            <p>Upload an image and ask a question to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End Vision Mode Panel -->
+
+        <!-- Image Generation Mode Panel -->
+        <div id="image-gen-panel" class="mode-panel" role="tabpanel" aria-labelledby="image-gen-tab">
+            <div class="playground">
+                <!-- Left Panel: Generation Controls -->
+                <div class="card">
+                    <h3 class="card-title">Image Generation</h3>
+                    
+                    <div class="settings-group">
+                        <label for="imageGenPrompt">Describe the image you want to generate</label>
+                        <textarea id="imageGenPrompt" placeholder="A futuristic cityscape at sunset with flying cars..." style="min-height: 120px; width: 100%; padding: var(--spacing-sm); background: var(--surface-light); border: 1px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label>Inspiration Prompts</label>
+                        <div class="quick-actions">
+                            <button class="quick-action-btn" onclick="setImageGenPrompt('A serene mountain landscape at sunrise')">🏔️ Landscape</button>
+                            <button class="quick-action-btn" onclick="setImageGenPrompt('A cute robot reading a book')">🤖 Sci-Fi</button>
+                            <button class="quick-action-btn" onclick="setImageGenPrompt('Abstract art with vibrant colors')">🎨 Abstract</button>
+                            <button class="quick-action-btn" onclick="setImageGenPrompt('A cozy coffee shop interior')">☕ Interior</button>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label for="imageSize">Image Size</label>
+                        <select id="imageSize">
+                            <option value="1024x1024">Square (1024x1024)</option>
+                            <option value="1792x1024">Landscape (1792x1024)</option>
+                            <option value="1024x1792">Portrait (1024x1792)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label for="imageQuality">Quality</label>
+                        <select id="imageQuality">
+                            <option value="standard">Standard</option>
+                            <option value="hd">HD (Higher Quality)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button id="imageGenSubmitBtn" class="btn-primary" onclick="generateImage()">
+                            <span id="imageGenBtnText">🎨 Generate Image</span>
+                        </button>
+                        <button class="btn-secondary" onclick="clearImageGenInput()">Clear</button>
+                    </div>
+                </div>
+                
+                <!-- Right Panel: Generated Images -->
+                <div class="card">
+                    <h3 class="card-title">Generated Images</h3>
+                    <div id="imageGenTypingIndicator" class="typing-indicator">
+                        <span>Generating image</span>
+                        <div class="typing-dots">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                    <div id="imageGenOutput" class="output-panel">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🎨</div>
+                            <p>Enter a prompt and click Generate to create AI art</p>
+                        </div>
+                    </div>
+                    <div id="imageGallery" class="image-gallery"></div>
+                </div>
+            </div>
+        </div>
+        <!-- End Image Generation Mode Panel -->
+
     </main>
 
     <script>
@@ -1090,6 +1441,42 @@
         }
 
         /**
+         * Render output with markdown formatting and syntax highlighting
+         * This function processes AI responses to display code blocks with syntax coloring
+         * and markdown formatting using Marked.js and Highlight.js libraries
+         * 
+         * @param {string} content - The raw content from the AI response
+         * @returns {string} - HTML formatted content with syntax highlighting
+         */
+        function renderOutput(content) {
+            // Configure marked to use Highlight.js for code block syntax highlighting
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    // If language is specified and supported by Highlight.js, use it
+                    if (lang && hljs.getLanguage(lang)) {
+                        try {
+                            return hljs.highlight(code, { language: lang }).value;
+                        } catch (err) {
+                            console.error('Highlight.js error:', err);
+                        }
+                    }
+                    // Otherwise, auto-detect the language
+                    try {
+                        return hljs.highlightAuto(code).value;
+                    } catch (err) {
+                        console.error('Highlight.js auto-detect error:', err);
+                        return code; // Return plain code if highlighting fails
+                    }
+                },
+                breaks: true, // Convert line breaks to <br>
+                gfm: true // Enable GitHub Flavored Markdown
+            });
+            
+            // Parse markdown content to HTML
+            return marked.parse(content);
+        }
+
+        /**
          * Add message to conversation display
          */
         function addMessage(role, content) {
@@ -1106,12 +1493,15 @@
             const time = new Date().toLocaleTimeString();
             const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             
+            // Render content based on role: markdown for assistant, plain text for user
+            const renderedContent = role === 'assistant' ? renderOutput(content) : escapeHtml(content);
+            
             messageEl.innerHTML = `
                 <div class="message-header">
                     <span class="message-role">${role === 'user' ? 'You' : 'AI Assistant'}</span>
                     <span class="message-time">${time}</span>
                 </div>
-                <div class="message-content">${escapeHtml(content)}</div>
+                <div class="message-content">${renderedContent}</div>
                 <div class="message-actions">
                     <button class="action-btn" onclick="copyMessage('${messageId}')">📋 Copy</button>
                     ${role === 'assistant' ? '<button class="action-btn" onclick="regenerateResponse()">🔄 Regenerate</button>' : ''}
@@ -1489,6 +1879,297 @@
             // Re-render chart
             if (chartInstance) {
                 chartInstance.render();
+            }
+        }
+        
+        /**
+         * Switch between different AI modes (chat, vision, image-gen)
+         */
+        function switchMode(mode) {
+            // Update tabs
+            document.querySelectorAll('.mode-tab').forEach(tab => {
+                tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
+            });
+            event.target.classList.add('active');
+            event.target.setAttribute('aria-selected', 'true');
+            
+            // Update panels
+            document.querySelectorAll('.mode-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(`${mode}-panel`).classList.add('active');
+        }
+        
+        /**
+         * Load preview image for vision mode
+         */
+        function loadVisionPreview() {
+            const imageUrl = document.getElementById('visionImageUrl').value.trim();
+            if (!imageUrl) {
+                alert('Please enter an image URL');
+                return;
+            }
+            
+            const previewImage = document.getElementById('visionPreviewImage');
+            const placeholder = document.getElementById('visionUploadPlaceholder');
+            const uploadArea = document.getElementById('visionImageUpload');
+            
+            previewImage.src = imageUrl;
+            previewImage.style.display = 'block';
+            placeholder.style.display = 'none';
+            uploadArea.classList.add('has-image');
+        }
+        
+        /**
+         * Set vision prompt
+         */
+        function setVisionPrompt(prompt) {
+            document.getElementById('visionPrompt').value = prompt;
+        }
+        
+        /**
+         * Analyze image with vision API
+         */
+        async function analyzeVision() {
+            const imageUrl = document.getElementById('visionImageUrl').value.trim();
+            const prompt = document.getElementById('visionPrompt').value.trim();
+            
+            if (!imageUrl) {
+                showVisionError('Please enter an image URL');
+                return;
+            }
+            
+            if (!prompt) {
+                showVisionError('Please enter a question about the image');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('visionSubmitBtn');
+            const btnText = document.getElementById('visionBtnText');
+            submitBtn.disabled = true;
+            btnText.innerHTML = '<div class="spinner"></div> Analyzing...';
+            
+            document.getElementById('visionTypingIndicator').classList.add('active');
+            
+            try {
+                const response = await fetch('/ai/vision', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_url: imageUrl,
+                        prompt: prompt,
+                        session_id: sessionId.value.trim() || undefined
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayVisionResult(data.response);
+                
+            } catch (error) {
+                showVisionError(error.message);
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = 'Analyze Image';
+                document.getElementById('visionTypingIndicator').classList.remove('active');
+            }
+        }
+        
+        /**
+         * Display vision analysis result
+         */
+        function displayVisionResult(result) {
+            const output = document.getElementById('visionOutput');
+            output.innerHTML = `
+                <div class="message message-assistant">
+                    <div class="message-header">
+                        <span class="message-role">AI Vision Analysis</span>
+                        <span class="message-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(result)}</div>
+                </div>
+            `;
+        }
+        
+        /**
+         * Show vision error
+         */
+        function showVisionError(message) {
+            const output = document.getElementById('visionOutput');
+            output.innerHTML = `
+                <div class="message message-error">
+                    <div class="message-header">
+                        <span class="message-role">Error</span>
+                        <span class="message-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(message)}</div>
+                </div>
+            `;
+        }
+        
+        /**
+         * Clear vision input
+         */
+        function clearVisionInput() {
+            document.getElementById('visionImageUrl').value = '';
+            document.getElementById('visionPrompt').value = '';
+            document.getElementById('visionPreviewImage').style.display = 'none';
+            document.getElementById('visionUploadPlaceholder').style.display = 'block';
+            document.getElementById('visionImageUpload').classList.remove('has-image');
+            document.getElementById('visionOutput').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">👁️</div>
+                    <p>Upload an image and ask a question to get started</p>
+                </div>
+            `;
+        }
+        
+        /**
+         * Set image generation prompt
+         */
+        function setImageGenPrompt(prompt) {
+            document.getElementById('imageGenPrompt').value = prompt;
+        }
+        
+        /**
+         * Generate image with DALL-E
+         */
+        async function generateImage() {
+            const prompt = document.getElementById('imageGenPrompt').value.trim();
+            
+            if (!prompt) {
+                showImageGenError('Please enter a description for the image');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('imageGenSubmitBtn');
+            const btnText = document.getElementById('imageGenBtnText');
+            const size = document.getElementById('imageSize').value;
+            const quality = document.getElementById('imageQuality').value;
+            
+            submitBtn.disabled = true;
+            btnText.innerHTML = '<div class="spinner"></div> Generating...';
+            
+            document.getElementById('imageGenTypingIndicator').classList.add('active');
+            
+            try {
+                const response = await fetch('/ai/image/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        size: size,
+                        quality: quality,
+                        n: 1,
+                        session_id: sessionId.value.trim() || undefined
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayGeneratedImage(data.images[0], prompt);
+                
+            } catch (error) {
+                showImageGenError(error.message);
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = '🎨 Generate Image';
+                document.getElementById('imageGenTypingIndicator').classList.remove('active');
+            }
+        }
+        
+        /**
+         * Display generated image
+         */
+        function displayGeneratedImage(imageData, prompt) {
+            const output = document.getElementById('imageGenOutput');
+            const gallery = document.getElementById('imageGallery');
+            
+            // Clear empty state
+            output.innerHTML = `
+                <div class="message message-assistant">
+                    <div class="message-header">
+                        <span class="message-role">Generated Image</span>
+                        <span class="message-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-content">
+                        <strong>Prompt:</strong> ${escapeHtml(prompt)}<br>
+                        ${imageData.revised_prompt ? `<em>Revised: ${escapeHtml(imageData.revised_prompt)}</em>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Add to gallery
+            const galleryItem = document.createElement('div');
+            galleryItem.className = 'gallery-image';
+            galleryItem.innerHTML = `
+                <img src="${imageData.url}" alt="Generated image">
+                <div class="image-actions">
+                    <button class="image-action-btn" onclick="window.open('${imageData.url}', '_blank')">👁️ View</button>
+                    <button class="image-action-btn" onclick="downloadImage('${imageData.url}', 'savrli-ai-image-${Date.now()}.png')">💾 Download</button>
+                </div>
+            `;
+            gallery.insertBefore(galleryItem, gallery.firstChild);
+        }
+        
+        /**
+         * Show image generation error
+         */
+        function showImageGenError(message) {
+            const output = document.getElementById('imageGenOutput');
+            output.innerHTML = `
+                <div class="message message-error">
+                    <div class="message-header">
+                        <span class="message-role">Error</span>
+                        <span class="message-time">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(message)}</div>
+                </div>
+            `;
+        }
+        
+        /**
+         * Clear image generation input
+         */
+        function clearImageGenInput() {
+            document.getElementById('imageGenPrompt').value = '';
+            document.getElementById('imageGenOutput').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎨</div>
+                    <p>Enter a prompt and click Generate to create AI art</p>
+                </div>
+            `;
+        }
+        
+        /**
+         * Download image
+         */
+        async function downloadImage(url, filename) {
+            try {
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                console.error('Failed to download image:', error);
+                alert('Failed to download image. You can right-click and save it instead.');
             }
         }
 
