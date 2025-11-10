@@ -171,12 +171,31 @@ https://your-project.vercel.app/playground
 
 ### **Playground Features**
 
+✨ **Three AI Modes** - Tabbed interface for Chat, Vision, and Image Generation  
 🎯 **Model Selection** - Choose between GPT-3.5 Turbo, GPT-4, and GPT-4 Turbo  
-⚙️ **Parameter Controls** - Adjust temperature, max tokens, and other OpenAI parameters  
+👁️ **Vision Analysis** - Upload and analyze images with GPT-4 Vision  
+🎨 **Image Generation** - Create AI art with DALL-E 3  
+⚙️ **Parameter Controls** - Adjust temperature, max tokens, size, quality, and more  
 💬 **Conversation History** - Maintain context across multiple messages  
-🎨 **System Instructions** - Customize AI personality and behavior  
-📊 **Real-time Feedback** - See loading states and error messages  
-📱 **Responsive Design** - Works on desktop, tablet, and mobile devices  
+📊 **Usage Analytics** - Real-time stats, charts, and session tracking  
+🚀 **Quick Actions** - Pre-configured sample prompts for each mode  
+📱 **Responsive Design** - Works seamlessly on desktop, tablet, and mobile  
+📥 **Export** - Download conversations and images  
+⌨️ **Keyboard Shortcuts** - ⌘K (focus), ⌘E (export), ⌘⇧C (clear)
+
+### **Screenshots**
+
+#### Chat Mode
+![Chat Mode](https://github.com/user-attachments/assets/aecbfd2c-4ade-41cf-b0f1-c5a8a3e65356)
+*Interactive chat interface with model selection, parameter controls, and real-time response streaming*
+
+#### Vision Mode
+![Vision Mode](https://github.com/user-attachments/assets/25eb7245-64b9-4b7f-8e61-337010b9a41e)
+*Image analysis with GPT-4 Vision - upload images and ask questions about them*
+
+#### Image Generation Mode
+![Image Generation Mode](https://github.com/user-attachments/assets/200abef5-bf35-4c49-9186-a3b6761c2d1d)
+*Create AI-generated images with DALL-E 3 using custom prompts and settings*  
 
 ### **Perfect For**
 
@@ -216,37 +235,114 @@ Retrieve conversation history for a specific session.
 
 Clear all conversation history for a specific session.
 
-### 4. **Interactive Playground**
+### 4. **Vision/Image Analysis**
+
+`POST /ai/vision`
+
+Analyze images using GPT-4 Vision. Send an image URL and a prompt to get AI-powered image analysis, object detection, OCR, and more.
+
+**Request Body:**
+```json
+{
+  "image_url": "https://example.com/image.jpg",
+  "prompt": "What objects can you see in this image?",
+  "max_tokens": 300,
+  "model": "gpt-4-vision-preview",
+  "session_id": "user-123"
+}
+```
+
+**Response:**
+```json
+{
+  "response": "This image shows a cat sitting on a windowsill...",
+  "image_url": "https://example.com/image.jpg",
+  "session_id": "user-123"
+}
+```
+
+### 5. **Image Generation**
+
+`POST /ai/image/generate`
+
+Generate images from text descriptions using DALL-E 3. Create custom AI art, illustrations, and visual content.
+
+**Request Body:**
+```json
+{
+  "prompt": "A futuristic cityscape at sunset with flying cars",
+  "n": 1,
+  "size": "1024x1024",
+  "quality": "standard",
+  "model": "dall-e-3",
+  "session_id": "user-123"
+}
+```
+
+**Response:**
+```json
+{
+  "images": [
+    {
+      "url": "https://oaidalleapiprodscus.blob.core.windows.net/...",
+      "revised_prompt": "A futuristic cityscape at sunset..."
+    }
+  ],
+  "prompt": "A futuristic cityscape at sunset with flying cars",
+  "model": "dall-e-3",
+  "session_id": "user-123"
+}
+```
+
+### 6. **Audio Transcription** (Coming Soon)
+
+`POST /ai/audio/transcribe`
+
+Transcribe audio files to text using Whisper. Currently returns 501 Not Implemented - file upload support coming soon.
+
+### 7. **Interactive Playground**
 
 `GET /playground`
 
-Serves the interactive demo page for testing AI features in a browser.
+Serves the enhanced interactive demo page for testing AI features in a browser. Now includes:
+- **Chat Mode**: Text-based conversations with GPT models
+- **Vision Mode**: Upload and analyze images with GPT-4 Vision
+- **Image Generation Mode**: Create AI art with DALL-E 3
 
-### 5. **List Integrations**
+**Features:**
+- Tabbed interface for different AI modes
+- Real-time parameter controls
+- Sample prompts and quick actions
+- Image preview and gallery
+- Session management and history
+- Export functionality
+- Usage analytics dashboard
+
+### 8. **List Integrations**
 
 `GET /integrations`
 
 Lists all available integration plugins and their status.
 
-### 6. **Send Integration Message**
+### 9. **Send Integration Message**
 
 `POST /integrations/send`
 
 Send a message through a specific integration plugin (Slack, Discord, Notion, Google Docs).
 
-### 7. **Process Integration Webhook**
+### 10. **Process Integration Webhook**
 
 `POST /integrations/webhook`
 
 Process incoming webhooks from integration platforms.
 
-### 8. **Get Integration Info**
+### 11. **Get Integration Info**
 
 `GET /integrations/{plugin_name}/info`
 
 Get detailed information about a specific integration plugin.
 
-### 9. **Platform-Specific Endpoints**
+### 12. **Platform-Specific Endpoints**
 
 - `POST /integrations/slack/send` - Send message to Slack
 - `POST /integrations/discord/send` - Send message to Discord
@@ -254,7 +350,7 @@ Get detailed information about a specific integration plugin.
 - `POST /integrations/google-docs/create` - Create Google Docs document
 - `POST /integrations/google-docs/append` - Append to Google Docs document
 
-### 10. **Health Check**
+### 13. **Health Check**
 
 `GET /`
 
