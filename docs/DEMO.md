@@ -177,26 +177,27 @@ Planned endpoint for file uploads to support multimodal testing.
 
 ### Demo Page Interface
 
-![Demo Page](../docs/images/demo-page-placeholder.png)
-*TODO: Add screenshot after implementation (issue #36)*
+![Demo Page](https://github.com/user-attachments/assets/32e36207-2112-497c-a2b1-726365175528)
 
-**Placeholder description:**
-- Clean, minimal interface
-- Sample prompt buttons at top
-- Large text area for input
-- Send and Clear buttons
+The demo page features:
+- Clean, minimal interface with rocket emoji branding
+- Sample prompt buttons at top (Quantum Computing, Python Code, REST APIs, Productivity)
+- Large text area for input with helpful placeholder text
+- Send and Clear Output buttons
 - Scrollable output area with timestamped messages
+- File upload section (placeholder for future implementation)
+- Reference to issue #36 in the footer
 
 ### Chat Interaction
 
-![Chat Interaction](../docs/images/demo-chat-placeholder.png)
-*TODO: Add screenshot showing chat interaction (issue #36)*
+The demo page supports real-time interaction with the AI chat endpoint:
+- User messages display in blue with timestamp
+- AI responses display in purple with timestamp
+- Error messages display in red
+- All messages are color-coded and timestamped for clarity
+- The output area auto-scrolls to show latest messages
 
-**Placeholder description:**
-- User message in blue
-- AI response in purple
-- Error messages in red
-- Timestamps on each message
+*Note: Screenshot of actual chat interaction can be taken during manual testing with a valid OpenAI API key.*
 
 ## Architecture
 
