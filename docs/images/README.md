@@ -104,8 +104,42 @@ For animated GIFs:
 
 <!-- Update this list when adding new images -->
 
-Currently, this directory contains placeholder documentation. Visual assets will be added as they are created.
+### Available Screenshots
+- `playground-overview.png` - Full overview of the interactive playground interface showing chat mode with configuration panel, response area, and stats dashboard
+- `playground-image-generation.png` - Image generation tab showing DALL-E integration with size and quality controls
+
+### Screenshots Needed
+The following assets would enhance the documentation:
+
+#### Setup & Installation
+- `setup-python-success.png` - Screenshot of successful Python setup script execution
+- `setup-bash-success.png` - Screenshot of successful Bash setup script execution
+- `environment-setup.gif` - Animated GIF showing .env file configuration
+- `dependency-install.png` - Screenshot of successful dependency installation
+
+#### Playground Interface (Additional)
+- `playground-first-message.gif` - Animated GIF of sending first message
+- `playground-vision-analysis.png` - Screenshot showing vision analysis in action
+- `playground-conversation.png` - Screenshot of a multi-turn conversation
+- `playground-error-handling.png` - Screenshot of error feedback display
+
+#### API Testing
+- `curl-first-request.gif` - Animated GIF of making first curl request
+- `postman-collection.png` - Screenshot of Postman collection import
+- `api-response-success.png` - Screenshot of successful API response
+- `api-docs-swagger.png` - Screenshot of auto-generated Swagger docs
+
+#### Development Workflow
+- `test-run-success.png` - Screenshot of successful pytest execution
+- `test-coverage-report.png` - Screenshot of coverage report
+- `server-startup.png` - Screenshot of server startup with welcome message
+- `hot-reload-demo.gif` - Animated GIF showing hot reload in action
+
+#### Troubleshooting
+- `error-api-key-missing.png` - Screenshot of API key error with solution
+- `error-dependency-missing.png` - Screenshot of dependency error
+- `error-port-in-use.png` - Screenshot of port conflict error
 
 ---
 
-**Note**: This is a placeholder directory structure. Contributors are encouraged to add screenshots and GIFs to enhance the onboarding experience!
+**Note**: Contributors are encouraged to add screenshots and GIFs to enhance the onboarding experience!
