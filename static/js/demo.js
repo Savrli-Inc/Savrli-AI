@@ -1,12 +1,13 @@
 /**
  * Savrli AI Demo Page JavaScript
- * 
- * This script wires the demo page buttons to API calls and renders responses.
- * It provides a simple interface for manual testing of chat and multimodal endpoints.
+ * Handles API interactions for chat and resource upload endpoints
+ * Provides a clean, responsive test harness with loading states and raw JSON
  */
 
 // API base URL - defaults to current origin
 const API_BASE = window.location.origin;
+const CHAT_ENDPOINT = `${API_BASE}/ai/chat`;
+const UPLOAD_ENDPOINT = `${API_BASE}/api/resources/upload`;
 
 /**
  * Initialize the demo page when DOM is loaded
@@ -20,11 +21,16 @@ document.addEventListener('DOMContentLoaded', () => {
  * Setup event listeners for all interactive elements
  */
 function setupEventListeners() {
-    // Chat API buttons
-    const chatButtons = document.querySelectorAll('.chat-demo-btn');
-    chatButtons.forEach(btn => {
+    // Chat API buttons (quick test)
+    document.querySelectorAll('.chat-demo-btn').forEach(btn => {
         btn.addEventListener('click', handleChatDemo);
     });
+
+    // Custom chat form
+    const customChatForm = document.getElementById('custom-chat-form');
+    if (customChatForm) {
+        customChatForm.addEventListener('submit', handleCustomChat);
+    }
 
     // Upload API button
     const uploadBtn = document.getElementById('upload-demo-btn');
@@ -32,28 +38,27 @@ function setupEventListeners() {
         uploadBtn.addEventListener('click', handleUploadDemo);
     }
 
-    // Custom chat form submission
-    const customChatForm = document.getElementById('custom-chat-form');
-    if (customChatForm) {
-        customChatForm.addEventListener('submit', handleCustomChat);
+    // File input change (for metadata preview)
+    const fileInput = document.getElementById('file-input') || document.getElementById('file-upload');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileSelect);
     }
 }
 
 /**
- * Handle chat demo button clicks
+ * Handle quick test button clicks
  */
 async function handleChatDemo(event) {
-    const button = event.target;
+    const button = event.target.closest('button');
     const prompt = button.dataset.prompt;
     const sessionId = button.dataset.sessionId || null;
-    
+
     if (!prompt) {
         displayError('No prompt found for this button');
         return;
     }
 
     displayLoading('chat-output');
-    
     try {
         const response = await callChatAPI(prompt, sessionId);
         displayChatResponse(response);
@@ -67,23 +72,23 @@ async function handleChatDemo(event) {
  */
 async function handleCustomChat(event) {
     event.preventDefault();
-    
+
     const promptInput = document.getElementById('custom-prompt');
     const sessionInput = document.getElementById('custom-session-id');
-    
+
     const prompt = promptInput.value.trim();
     const sessionId = sessionInput.value.trim() || null;
-    
+
     if (!prompt) {
         displayError('Please enter a prompt');
         return;
     }
 
     displayLoading('chat-output');
-    
     try {
         const response = await callChatAPI(prompt, sessionId);
         displayChatResponse(response);
+        promptInput.value = ''; // Clear input
     } catch (error) {
         displayError(`Chat API Error: ${error.message}`);
     }
@@ -93,19 +98,12 @@ async function handleCustomChat(event) {
  * Call the /ai/chat API endpoint
  */
 async function callChatAPI(prompt, sessionId = null) {
-    const requestBody = {
-        prompt: prompt
-    };
-    
-    if (sessionId) {
-        requestBody.session_id = sessionId;
-    }
+    const requestBody = { prompt };
+    if (sessionId) requestBody.session_id = sessionId;
 
-    const response = await fetch(`${API_BASE}/ai/chat`, {
+    const response = await fetch(CHAT_ENDPOINT, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
     });
 
@@ -113,7 +111,6 @@ async function callChatAPI(prompt, sessionId = null) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `HTTP ${response.status}`);
     }
-
     return await response.json();
 }
 
@@ -121,16 +118,15 @@ async function callChatAPI(prompt, sessionId = null) {
  * Handle upload demo button click
  */
 async function handleUploadDemo() {
-    const fileInput = document.getElementById('file-input');
-    const file = fileInput.files[0];
-    
+    const fileInput = document.getElementById('file-input') || document.getElementById('file-upload');
+    const file = fileInput?.files[0];
+
     if (!file) {
         displayError('Please select a file to upload');
         return;
     }
 
     displayLoading('upload-output');
-    
     try {
         const response = await callUploadAPI(file);
         displayUploadResponse(response);
@@ -146,7 +142,7 @@ async function callUploadAPI(file) {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE}/api/resources/upload`, {
+    const response = await fetch(UPLOAD_ENDPOINT, {
         method: 'POST',
         body: formData
     });
@@ -155,7 +151,6 @@ async function callUploadAPI(file) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `HTTP ${response.status}`);
     }
-
     return await response.json();
 }
 
@@ -164,16 +159,16 @@ async function callUploadAPI(file) {
  */
 function displayLoading(outputId) {
     const output = document.getElementById(outputId);
-    if (output) {
-        output.innerHTML = `
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Processing request...</p>
-            </div>
-        `;
-        output.classList.remove('error');
-        output.classList.add('loading-state');
-    }
+    if (!output) return;
+
+    output.innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Processing request...</p>
+        </div>
+    `;
+    output.classList.remove('error');
+    output.classList.add('loading-state');
 }
 
 /**
@@ -184,7 +179,7 @@ function displayChatResponse(data) {
     if (!output) return;
 
     output.classList.remove('loading-state', 'error');
-    
+
     const responseText = data.response || 'No response text';
     const sessionId = data.session_id || 'None';
 
@@ -216,7 +211,7 @@ function displayUploadResponse(data) {
     if (!output) return;
 
     output.classList.remove('loading-state', 'error');
-    
+
     output.innerHTML = `
         <div class="response-container">
             <div class="response-text">
@@ -228,7 +223,7 @@ function displayUploadResponse(data) {
                     <div class="file-info">
                         <p><strong>Filename:</strong> ${escapeHtml(data.file_info.filename)}</p>
                         <p><strong>Size:</strong> ${formatBytes(data.file_info.size)}</p>
-                        <p><strong>Type:</strong> ${escapeHtml(data.file_info.content_type)}</p>
+                        <p><strong>Type:</strong> ${escapeHtml(data.file_info.content_type || 'N/A')}</p>
                     </div>
                 ` : ''}
             </div>
@@ -251,7 +246,7 @@ function displayError(message, outputId = 'chat-output') {
 
     output.classList.remove('loading-state');
     output.classList.add('error');
-    
+
     output.innerHTML = `
         <div class="error-container">
             <h3>Error</h3>
@@ -261,12 +256,18 @@ function displayError(message, outputId = 'chat-output') {
 }
 
 /**
- * Escape HTML to prevent XSS
+ * Handle file selection (preview)
  */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+function handleFileSelect(event) {
+    const fileInput = event.target;
+    const file = fileInput.files[0];
+    const fileInfo = document.getElementById('file-info');
+
+    if (file && fileInfo) {
+        fileInfo.textContent = `Selected: ${file.name} (${formatBytes(file.size)})`;
+    } else if (fileInfo) {
+        fileInfo.textContent = 'No file selected';
+    }
 }
 
 /**
@@ -278,4 +279,13 @@ function formatBytes(bytes) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
