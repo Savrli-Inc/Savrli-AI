@@ -24,6 +24,16 @@ New to Savrli AI? Follow this checklist to get up and running:
   ```bash
   pip install -r requirements.txt
   ```
+  
+  **💡 Prefer automated setup?** Use our setup scripts:
+  ```bash
+  # Python script (Recommended)
+  python3 setup.py
+  
+  # Or Bash script (Unix/Linux/macOS)
+  ./setup.sh
+  ```
+  These scripts automate environment checks, dependency installation, and configuration!
 
 - [ ] **Step 3:** Set up environment variables
   - Create a `.env` file in the project root
@@ -60,6 +70,23 @@ New to Savrli AI? Follow this checklist to get up and running:
 - [ ] **Step 7:** Deploy to Vercel (see [Deployment section](#-deployment-vercel))
 
 - [ ] **Step 8:** Test your deployed endpoint with the sample requests below
+
+---
+
+## 🎓 New to Savrli AI?
+
+### Visual Onboarding Guide
+
+For a comprehensive visual guide with screenshots and troubleshooting, see:
+- 📖 **[Detailed Onboarding Guide](docs/ONBOARDING_GUIDE.md)** - Step-by-step instructions with diagrams
+- 🎬 **Visual Guides** - Screenshots and GIFs available in `docs/images/`
+
+### Beginner Resources
+
+- 🚀 **Quick Start**: Use automated setup scripts (`python3 setup.py` or `./setup.sh`)
+- 🎮 **Interactive Testing**: Try the `/playground` endpoint first - no code needed!
+- 🐛 **Common Issues**: Check the [Troubleshooting section](#-troubleshooting)
+- 🤝 **First Contribution**: Look for issues labeled ["First Issue"](https://github.com/Savrli-Inc/Savrli-AI/issues?q=is%3Aissue+is%3Aopen+label%3A%22First+Issue%22)
 
 ---
 
@@ -670,20 +697,193 @@ The test suite covers:
 
 ## 🔧 Troubleshooting
 
-### **Issue: "OPENAI_API_KEY is not set"**
-**Solution:** Set the environment variable in `.env` file or Vercel dashboard.
+### Quick Setup Issues
 
-### **Issue: "AI temporarily unavailable" (503 error)**
-**Solution:** Check your OpenAI API key, quota, and network connectivity.
+#### **"OPENAI_API_KEY is not set"**
+**Symptoms**: Server fails to start with error message about missing API key.
 
-### **Issue: "temperature must be between 0.0 and 2.0" (400 error)**
-**Solution:** Ensure all parameters are within valid ranges (see [Request Parameters](#-request-parameters)).
+**Solutions**:
+1. Create a `.env` file in the project root (use `setup.py` or `setup.sh`)
+2. Add your API key: `OPENAI_API_KEY=sk-your-actual-key-here`
+3. Get an API key from: https://platform.openai.com/api-keys
+4. Ensure no extra spaces or quotes around the key
+5. Restart the server after editing `.env`
 
-### **Issue: Empty or missing responses**
-**Solution:** Check OpenAI API status and your API quota. Enable logging to see detailed errors.
+**Common Mistakes**:
+- ❌ `.env` file in wrong directory
+- ❌ Spaces before/after the `=` sign
+- ❌ Wrapping key in quotes (not needed)
+- ✅ Correct format: `OPENAI_API_KEY=sk-proj-abc123...`
 
-### **Issue: Streaming not working**
-**Solution:** Ensure your client supports Server-Sent Events (SSE). Check the streaming example above.
+#### **"ModuleNotFoundError: No module named 'fastapi'"**
+**Symptoms**: Import errors when starting the server.
+
+**Solutions**:
+```bash
+# Run the setup script
+python3 setup.py
+
+# Or manually install dependencies
+pip install -r requirements.txt
+
+# If using virtual environment, activate it first
+source venv/bin/activate  # Unix/macOS
+venv\Scripts\activate     # Windows
+```
+
+#### **Port Already in Use (Address already in use)**
+**Symptoms**: Server won't start, complains port 8000 is busy.
+
+**Solutions**:
+```bash
+# Option 1: Use a different port
+uvicorn api.index:app --reload --port 8001
+
+# Option 2: Find and kill the process (Unix/macOS)
+lsof -ti:8000 | xargs kill -9
+
+# Option 3: Find and kill the process (Windows)
+netstat -ano | findstr :8000
+taskkill /PID <PID_NUMBER> /F
+```
+
+### API Request Issues
+
+#### **"AI temporarily unavailable" (503 error)**
+**Symptoms**: Requests fail with 503 status code.
+
+**Possible Causes & Solutions**:
+
+1. **Invalid or Expired API Key**
+   - Verify key at https://platform.openai.com/api-keys
+   - Check that key is active and not revoked
+   - Try regenerating the key
+
+2. **API Quota Exceeded**
+   - Log into OpenAI dashboard
+   - Check usage and billing
+   - Add payment method or upgrade plan
+
+3. **Rate Limiting**
+   - Wait 30-60 seconds and retry
+   - Implement exponential backoff in your client
+   - Consider upgrading your OpenAI tier
+
+4. **Network Issues**
+   - Test connectivity: `curl https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY"`
+   - Check firewall/proxy settings
+   - Verify DNS resolution
+
+#### **"temperature must be between 0.0 and 2.0" (400 error)**
+**Symptoms**: Validation errors on request parameters.
+
+**Solution**: Ensure all parameters are within valid ranges:
+
+| Parameter | Valid Range | Default |
+|-----------|-------------|---------|
+| `temperature` | 0.0 - 2.0 | 0.7 |
+| `max_tokens` | 1 - 2000 | 1000 |
+| `top_p` | 0.0 - 1.0 | - |
+| `frequency_penalty` | -2.0 - 2.0 | - |
+| `presence_penalty` | -2.0 - 2.0 | - |
+| `context_window` | 0 - 50 | 10 |
+
+**Example valid request**:
+```json
+{
+  "prompt": "Hello",
+  "temperature": 0.7,
+  "max_tokens": 1000,
+  "top_p": 0.9
+}
+```
+
+#### **Empty or Missing Responses**
+**Symptoms**: API returns 200 but response is empty or malformed.
+
+**Solutions**:
+1. Check OpenAI API status: https://status.openai.com/
+2. Verify your API quota hasn't been exhausted
+3. Enable detailed logging: `logging.basicConfig(level=logging.DEBUG)`
+4. Check for errors in server logs
+5. Try a simpler prompt to isolate the issue
+
+#### **Streaming Not Working**
+**Symptoms**: Streaming responses timeout or don't arrive.
+
+**Solutions**:
+1. Ensure client supports Server-Sent Events (SSE)
+2. Set request timeout to at least 30 seconds
+3. Check network doesn't buffer SSE responses
+4. Use example JavaScript client from docs:
+```javascript
+const eventSource = new EventSource('/ai/chat');
+eventSource.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.done) eventSource.close();
+  else if (data.content) console.log(data.content);
+};
+```
+
+### Testing Issues
+
+#### **Tests Failing**
+**Symptoms**: `pytest` shows errors or failures.
+
+**Solutions**:
+```bash
+# 1. Check Python version (need 3.8+)
+python3 --version
+
+# 2. Reinstall dependencies
+pip install -r requirements.txt --force-reinstall
+
+# 3. Set test API key
+export OPENAI_API_KEY=test-key-12345
+
+# 4. Run tests with verbose output
+pytest tests/ -v
+
+# 5. Run specific test to debug
+pytest tests/test_api.py::TestChatRequestValidation::test_basic_request -v
+```
+
+### Deployment Issues
+
+#### **Vercel Deployment Fails**
+**Symptoms**: Deployment errors on Vercel.
+
+**Solutions**:
+1. Verify `vercel.json` is properly configured
+2. Check environment variables are set in Vercel dashboard
+3. Review build logs for specific errors
+4. Ensure Python runtime is compatible (3.9+ recommended)
+5. Check function timeout settings (increase if needed)
+
+#### **Environment Variables Not Loading on Vercel**
+**Symptoms**: App works locally but not on Vercel.
+
+**Solutions**:
+1. Add environment variables in Vercel dashboard (Project Settings → Environment Variables)
+2. Redeploy after adding variables
+3. Check variable names match exactly (case-sensitive)
+4. For production, set variables for "Production" environment
+
+### Getting More Help
+
+If you're still stuck:
+
+1. **Check the detailed guide**: [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md)
+2. **Search existing issues**: [GitHub Issues](https://github.com/Savrli-Inc/Savrli-AI/issues)
+3. **Ask the community**: [GitHub Discussions](https://github.com/Savrli-Inc/Savrli-AI/discussions)
+4. **Report a bug**: [New Issue](https://github.com/Savrli-Inc/Savrli-AI/issues/new)
+
+**Pro tip**: Include these details when asking for help:
+- Python version (`python3 --version`)
+- Operating system
+- Error messages (full traceback)
+- Steps to reproduce
+- What you've already tried
 
 ---
 

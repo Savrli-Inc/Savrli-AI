@@ -25,7 +25,26 @@ logging.basicConfig(level=logging.INFO)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     # Fail fast during import/startup so misconfiguration is obvious
-    logger.error("OPENAI_API_KEY is not set. Set the environment variable and restart the app.")
+    error_msg = """
+    ╔════════════════════════════════════════════════════════════════════╗
+    ║                   OPENAI_API_KEY NOT CONFIGURED                    ║
+    ╚════════════════════════════════════════════════════════════════════╝
+    
+    The Savrli AI server requires an OpenAI API key to function.
+    
+    Quick Fix:
+    1. Create a .env file in the project root directory
+    2. Add this line: OPENAI_API_KEY=your-api-key-here
+    3. Get your API key from: https://platform.openai.com/api-keys
+    4. Restart the server
+    
+    Need help? Run the setup script:
+    - python3 setup.py  (or ./setup.sh on Unix/Linux/macOS)
+    
+    Documentation: README.md or docs/ONBOARDING_GUIDE.md
+    """
+    logger.error(error_msg)
+    print(error_msg)  # Also print to console for visibility
     raise RuntimeError("OPENAI_API_KEY environment variable is required")
 
 # Read configurable defaults from env
@@ -87,6 +106,49 @@ google_docs_config = {
 google_docs_plugin = GoogleDocsPlugin(ai_system=client, config=google_docs_config)
 if google_docs_config.get("credentials"):  # Only register if configured
     plugin_manager.register_plugin("google_docs", google_docs_plugin)
+
+# Startup event handler with welcome messaging
+@app.on_event("startup")
+async def startup_event():
+    """Display helpful startup information for developers"""
+    welcome_message = """
+    ╔════════════════════════════════════════════════════════════════════╗
+    ║              🚀 Savrli AI Server Started Successfully! 🚀          ║
+    ╚════════════════════════════════════════════════════════════════════╝
+    
+    ✅ OpenAI API: Connected (Model: {model})
+    ✅ Integrations: {integrations_count} plugin(s) registered
+    ✅ Server: Running on http://localhost:8000
+    
+    📍 Quick Links:
+       • API Docs (Swagger):  http://localhost:8000/docs
+       • Interactive Playground: http://localhost:8000/playground
+       • Health Check:        http://localhost:8000/
+    
+    🎯 Try your first request:
+       curl -X POST http://localhost:8000/ai/chat \\
+         -H "Content-Type: application/json" \\
+         -d '{{"prompt": "Hello, how are you?"}}'
+    
+    💡 Tips for beginners:
+       • Visit /playground for an easy-to-use web interface
+       • Check /docs for auto-generated API documentation
+       • Read docs/ONBOARDING_GUIDE.md for detailed help
+       • Look for 'First Issue' labeled tasks in GitHub Issues
+    
+    📚 Documentation:
+       • README.md - Full API reference
+       • CONTRIBUTING.md - Contribution guidelines
+       • docs/ONBOARDING_GUIDE.md - Detailed onboarding guide
+    
+    Happy coding! 🎉
+    """.format(
+        model=DEFAULT_MODEL,
+        integrations_count=len(plugin_manager.list_plugins())
+    )
+    
+    logger.info("Savrli AI server started successfully")
+    print(welcome_message)
 
 def trim_conversation_history(session_id: str):
     """Trim conversation history to MAX_HISTORY_PER_SESSION messages"""
@@ -355,7 +417,44 @@ async def clear_conversation_history(session_id: str):
 
 @app.get("/")
 async def root():
-    return {"message": "Savrli AI Chat API is running!"}
+    """
+    Root endpoint with helpful quick-start information.
+    
+    Perfect for new users to understand what the API offers and how to get started.
+    """
+    return {
+        "message": "🚀 Welcome to Savrli AI Chat API!",
+        "status": "running",
+        "version": "1.0.0",
+        "quick_start": {
+            "playground": "http://localhost:8000/playground",
+            "api_docs": "http://localhost:8000/docs",
+            "example_request": {
+                "endpoint": "POST /ai/chat",
+                "body": {
+                    "prompt": "Hello, how are you?"
+                }
+            }
+        },
+        "features": [
+            "💬 Conversational AI with GPT models",
+            "📝 Session-based conversation history",
+            "⚡ Streaming responses support",
+            "🎮 Interactive playground interface",
+            "🔌 Platform integrations (Slack, Discord, Notion, Google Docs)"
+        ],
+        "beginner_resources": {
+            "onboarding_guide": "docs/ONBOARDING_GUIDE.md",
+            "readme": "README.md",
+            "contributing": "CONTRIBUTING.md",
+            "first_issues": "Look for 'First Issue' label on GitHub"
+        },
+        "need_help": {
+            "documentation": "/docs",
+            "playground": "/playground",
+            "health_check": "/hello"
+        }
+    }
 
 @app.get("/hello")
 async def hello():

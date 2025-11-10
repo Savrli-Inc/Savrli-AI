@@ -5,6 +5,7 @@ Thank you for your interest in contributing to Savrli AI! We welcome contributio
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
+- [First-Time Contributors](#first-time-contributors)
 - [Getting Started](#getting-started)
 - [Development Workflow](#development-workflow)
 - [Branch Naming Conventions](#branch-naming-conventions)
@@ -19,7 +20,95 @@ Thank you for your interest in contributing to Savrli AI! We welcome contributio
 
 This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to the project maintainers.
 
+## First-Time Contributors
+
+👋 **Welcome!** We're excited to have you contribute to Savrli AI!
+
+### Finding Your First Issue
+
+Look for issues labeled **["First Issue"](https://github.com/Savrli-Inc/Savrli-AI/issues?q=is%3Aissue+is%3Aopen+label%3A%22First+Issue%22)** - these are:
+- ✅ Well-documented with clear requirements
+- ✅ Designed for beginners to learn the codebase
+- ✅ Smaller in scope and complexity
+- ✅ Often have mentorship available
+
+### Beginner-Friendly Areas to Contribute
+
+**📚 Documentation** (Great starting point!)
+- Fix typos or clarify confusing sections
+- Add examples to existing documentation
+- Write tutorials or guides
+- Improve code comments
+- Add missing docstrings
+
+**🧪 Testing** (Learn the codebase by testing it)
+- Add test cases for edge cases
+- Improve test coverage
+- Add integration tests
+- Fix flaky tests
+
+**✨ Small Features** (Build confidence with small wins)
+- Add input validation
+- Improve error messages
+- Add logging statements
+- Implement small helper functions
+
+**🐛 Bug Fixes** (Real impact, manageable scope)
+- Fix issues labeled "bug" + "good first issue"
+- Improve error handling
+- Fix UI/UX issues in playground
+
+### Before You Start
+
+1. **Read the onboarding guide**: [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md)
+2. **Set up your environment**: Run `python3 setup.py` for automated setup
+3. **Explore the playground**: Visit `http://localhost:8000/playground` to understand the app
+4. **Read existing code**: Spend time understanding the patterns used
+5. **Run the tests**: Make sure everything works before making changes
+
+### Getting Help
+
+**Don't hesitate to ask questions!** No question is too simple.
+
+- 💬 **General questions**: [GitHub Discussions](https://github.com/Savrli-Inc/Savrli-AI/discussions)
+- 🐛 **Bug reports**: [GitHub Issues](https://github.com/Savrli-Inc/Savrli-AI/issues)
+- 📖 **Documentation**: Check [docs/](docs/) directory
+- 🤝 **Need a mentor**: Comment on "First Issue" labeled issues
+
+### Tips for Success
+
+1. **Start Small**: Pick one issue and complete it well
+2. **Read the Code**: Understanding existing patterns helps a lot
+3. **Test Thoroughly**: Run tests before AND after your changes
+4. **Ask for Reviews Early**: Don't wait until it's "perfect"
+5. **Follow Conventions**: Match the existing code style
+6. **Be Patient**: Code reviews may take time - that's normal!
+7. **Learn from Feedback**: Reviews are learning opportunities
+
 ## Getting Started
+
+### Automated Setup (Recommended for Beginners)
+
+Use our automated setup scripts to streamline the process:
+
+```bash
+# Option 1: Python script (Recommended)
+python3 setup.py
+
+# Option 2: Bash script (Unix/Linux/macOS)
+./setup.sh
+```
+
+These scripts will:
+- ✅ Check your Python version
+- ✅ Install all dependencies
+- ✅ Create environment file template
+- ✅ Run basic health checks
+- ✅ Guide you through next steps
+
+### Manual Setup
+
+If you prefer manual setup:
 
 1. **Fork the repository** on GitHub
 2. **Clone your fork** locally:
