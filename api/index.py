@@ -153,6 +153,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Import and include resource tools router
+from api.resource_tools import router as resource_tools_router
+app.include_router(resource_tools_router)
+
 # ----------------------------------------------------------------------
 # Helpers
 # ----------------------------------------------------------------------
