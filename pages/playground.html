@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Savrli AI Playground - Interactive Demo</title>
+    
+    <!-- Markdown and Syntax Highlighting Libraries -->
+    <!-- Marked.js for parsing markdown from AI responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <!-- Highlight.js for syntax highlighting code blocks -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    
     <style>
         /* 
          * Savrli AI Playground Stylesheet
@@ -407,8 +415,54 @@
         .message-content {
             color: var(--text-secondary);
             line-height: 1.6;
-            white-space: pre-wrap;
             word-wrap: break-word;
+        }
+        
+        /* Markdown and Code Block Styling */
+        /* These styles ensure code blocks and markdown are rendered beautifully */
+        .message-content pre {
+            background: var(--background);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            overflow-x: auto;
+            margin: var(--spacing-sm) 0;
+        }
+        
+        .message-content code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .message-content pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            display: block;
+        }
+        
+        .message-content code:not(pre code) {
+            background: var(--surface-light);
+            padding: 0.125rem 0.375rem;
+            border-radius: var(--radius-sm);
+            color: var(--primary-color);
+        }
+        
+        .message-content p {
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .message-content ul, .message-content ol {
+            margin-left: var(--spacing-lg);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .message-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: var(--spacing-md);
+            margin: var(--spacing-sm) 0;
+            color: var(--text-muted);
+            font-style: italic;
         }
         
         .empty-state {
@@ -1387,6 +1441,42 @@
         }
 
         /**
+         * Render output with markdown formatting and syntax highlighting
+         * This function processes AI responses to display code blocks with syntax coloring
+         * and markdown formatting using Marked.js and Highlight.js libraries
+         * 
+         * @param {string} content - The raw content from the AI response
+         * @returns {string} - HTML formatted content with syntax highlighting
+         */
+        function renderOutput(content) {
+            // Configure marked to use Highlight.js for code block syntax highlighting
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    // If language is specified and supported by Highlight.js, use it
+                    if (lang && hljs.getLanguage(lang)) {
+                        try {
+                            return hljs.highlight(code, { language: lang }).value;
+                        } catch (err) {
+                            console.error('Highlight.js error:', err);
+                        }
+                    }
+                    // Otherwise, auto-detect the language
+                    try {
+                        return hljs.highlightAuto(code).value;
+                    } catch (err) {
+                        console.error('Highlight.js auto-detect error:', err);
+                        return code; // Return plain code if highlighting fails
+                    }
+                },
+                breaks: true, // Convert line breaks to <br>
+                gfm: true // Enable GitHub Flavored Markdown
+            });
+            
+            // Parse markdown content to HTML
+            return marked.parse(content);
+        }
+
+        /**
          * Add message to conversation display
          */
         function addMessage(role, content) {
@@ -1403,12 +1493,15 @@
             const time = new Date().toLocaleTimeString();
             const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             
+            // Render content based on role: markdown for assistant, plain text for user
+            const renderedContent = role === 'assistant' ? renderOutput(content) : escapeHtml(content);
+            
             messageEl.innerHTML = `
                 <div class="message-header">
                     <span class="message-role">${role === 'user' ? 'You' : 'AI Assistant'}</span>
                     <span class="message-time">${time}</span>
                 </div>
-                <div class="message-content">${escapeHtml(content)}</div>
+                <div class="message-content">${renderedContent}</div>
                 <div class="message-actions">
                     <button class="action-btn" onclick="copyMessage('${messageId}')">📋 Copy</button>
                     ${role === 'assistant' ? '<button class="action-btn" onclick="regenerateResponse()">🔄 Regenerate</button>' : ''}
