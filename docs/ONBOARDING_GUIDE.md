@@ -109,41 +109,32 @@ uvicorn api.index:app --reload
 
 ### Playground Interface Preview
 
+The interactive playground is your easiest way to test AI features without writing code:
+
+![Playground Interface](https://github.com/user-attachments/assets/6ad4f14a-ed37-40d4-bddc-ddc0aceed238)
+
+*Figure 1: The Savrli AI Playground interface showing chat configuration and response panels*
+
 When you visit `http://localhost:8000/playground`, you'll see:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                  Savrli AI Playground                        │
-├─────────────────────────────────────────────────────────────┤
-│  Model Selection: [GPT-3.5 Turbo ▼]                         │
-│  Temperature:     [0.7        ] (0.0 - 2.0)                 │
-│  Max Tokens:      [1000       ]                             │
-│                                                              │
-│  System Instructions (Optional):                            │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ You are a helpful assistant...                       │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                              │
-│  Your Message:                                               │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ Hello, how are you?                                  │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                              │
-│              [ Send Message ]  [ Clear History ]            │
-│                                                              │
-│  Response:                                                   │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │ I'm doing well, thank you! How can I help you today?│  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-```
+- **Configuration Panel** (Left): Model selection, temperature, tokens, system instructions
+- **Response Panel** (Right): AI responses with markdown rendering and syntax highlighting
+- **Mode Tabs**: Switch between Chat, Vision, and Image Generation
+- **Stats Dashboard**: Real-time metrics showing message count, session time, and response times
+- **Quick Actions**: Pre-built prompts to get started quickly
 
-> **Note**: Actual screenshots and GIFs can be added to the `docs/images/` directory.
-> Recommended screenshots:
-> - `setup-success.png` - Successful setup completion
-> - `playground-interface.png` - Playground UI overview
-> - `first-request.gif` - Animated GIF of first API request
-> - `test-run.png` - Successful test execution
+**Multimodal Features:**
+
+![Image Generation Tab](https://github.com/user-attachments/assets/e01d31a0-8083-4e37-a353-240f01cd5e61)
+
+*Figure 2: Image Generation tab for creating AI art with DALL-E*
+
+The playground supports:
+- 💬 **Chat Mode**: Conversational AI with GPT models
+- 👁️ **Vision Mode**: Analyze images and extract information
+- 🎨 **Image Generation**: Create AI art with DALL-E
+
+> **Note**: Screenshots are available in the `docs/images/` directory. Contributors can add more screenshots and GIFs following the guidelines in `docs/images/README.md`.
 
 ---
 
