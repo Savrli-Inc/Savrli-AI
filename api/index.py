@@ -18,7 +18,7 @@ import os
 import asyncio
 import logging
 import json
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from collections import defaultdict
 from pathlib import Path
@@ -49,7 +49,6 @@ if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY is required")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
-
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 DEFAULT_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
 DEFAULT_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
@@ -146,6 +145,7 @@ async def chat_endpoint(request: ChatRequest):
     if session_id and session_id in conversation_history:
         recent = conversation_history[session_id][-DEFAULT_CONTEXT_WINDOW:]
         messages.extend([{"role": m["role"], "content": m["content"]} for m in recent])
+
     messages.append({"role": "user", "content": request.prompt})
 
     if session_id:
@@ -168,6 +168,7 @@ async def chat_endpoint(request: ChatRequest):
                 model=model, messages=messages, max_tokens=max_tokens, temperature=temp
             )
             content = resp.choices[0].message.content.strip()
+
             if session_id:
                 conversation_history[session_id].append({
                     "role": "assistant",
@@ -175,10 +176,13 @@ async def chat_endpoint(request: ChatRequest):
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 })
                 trim_history(session_id)
+
             return {"response": content, "session_id": session_id}
+
     except Exception as e:
         logger.error(f"OpenAI error: {e}")
         raise HTTPException(503, "AI unavailable")
+
 
 async def stream_response(model, messages, max_tokens, temp, session_id):
     full = ""
@@ -193,6 +197,7 @@ async def stream_response(model, messages, max_tokens, temp, session_id):
                 full += delta
                 yield f"data: {json.dumps({'content': delta})}\n\n"
         yield "data: {\"done\": true}\n\n"
+
         if session_id:
             conversation_history[session_id].append({
                 "role": "assistant",
@@ -200,8 +205,10 @@ async def stream_response(model, messages, max_tokens, temp, session_id):
                 "timestamp": datetime.now(timezone.utc).isoformat()
             })
             trim_history(session_id)
+
     except Exception as e:
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
 
 # ----------------------------------------------------------------------
 # Demo: File Upload Endpoint
@@ -230,9 +237,14 @@ async def upload_resource(file: UploadFile = File(...)):
         logger.exception("Upload error: %s", e)
         raise HTTPException(status_code=500, detail="File upload failed")
 
+
 # ----------------------------------------------------------------------
 # Optional: Health Check
 # ----------------------------------------------------------------------
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "model": DEFAULT_MODEL, "timestamp": datetime.now(timezone.utc).isoformat()}
+    return {
+        "status": "healthy",
+        "model": DEFAULT_MODEL,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
