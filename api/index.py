@@ -10,6 +10,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
 from collections import defaultdict
 from pathlib import Path
+from contextlib import asynccontextmanager
 
 # Import plugin system
 from integrations.plugin_base import PluginManager
@@ -18,7 +19,7 @@ from integrations.discord_plugin import DiscordPlugin
 from integrations.notion_plugin import NotionPlugin
 from integrations.google_docs_plugin import GoogleDocsPlugin
 
-app = FastAPI()
+# Setup logging
 logger = logging.getLogger("api")
 logging.basicConfig(level=logging.INFO)
 
@@ -107,10 +108,11 @@ google_docs_plugin = GoogleDocsPlugin(ai_system=client, config=google_docs_confi
 if google_docs_config.get("credentials"):  # Only register if configured
     plugin_manager.register_plugin("google_docs", google_docs_plugin)
 
-# Startup event handler with welcome messaging
-@app.on_event("startup")
-async def startup_event():
-    """Display helpful startup information for developers"""
+# Lifespan context manager for startup/shutdown events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager with startup welcome message"""
+    # Startup
     welcome_message = """
     ╔════════════════════════════════════════════════════════════════════╗
     ║              🚀 Savrli AI Server Started Successfully! 🚀          ║
@@ -149,6 +151,14 @@ async def startup_event():
     
     logger.info("Savrli AI server started successfully")
     print(welcome_message)
+    
+    yield
+    
+    # Shutdown (if needed in the future)
+    logger.info("Savrli AI server shutting down")
+
+# Create FastAPI app with lifespan
+app = FastAPI(lifespan=lifespan)
 
 def trim_conversation_history(session_id: str):
     """Trim conversation history to MAX_HISTORY_PER_SESSION messages"""
