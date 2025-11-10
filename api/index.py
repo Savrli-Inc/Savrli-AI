@@ -143,6 +143,82 @@ class ChatRequest(BaseModel):
     # Enable streaming response
     stream: Optional[bool] = False
 
+# Vision/Image/Audio models (merged from both branches)
+class VisionRequest(BaseModel):
+    """Request model for vision/image analysis"""
+    prompt: str
+    image_url: str
+    model: Optional[str] = "gpt-4-vision-preview"
+    max_tokens: Optional[int] = 1000
+    session_id: Optional[str] = None
+
+class ImageGenerationRequest(BaseModel):
+    """Request model for image generation"""
+    prompt: str
+    n: Optional[int] = 1
+    size: Optional[str] = "1024x1024"
+    quality: Optional[str] = "standard"
+    model: Optional[str] = "dall-e-3"
+    session_id: Optional[str] = None
+
+class AudioTranscriptionRequest(BaseModel):
+    """Request model for audio transcription"""
+    audio_url: str
+    model: Optional[str] = "whisper-1"
+    language: Optional[str] = None
+    prompt: Optional[str] = None
+    session_id: Optional[str] = None
+
+class AudioRequest(BaseModel):
+    """Request model for audio transcription (alternative)"""
+    audio_url: str
+    model: Optional[str] = "whisper-1"
+    language: Optional[str] = None
+
+class FineTuningRequest(BaseModel):
+    """Request model for fine-tuning configuration"""
+    model: str
+    training_file: str
+    validation_file: Optional[str] = None
+    n_epochs: Optional[int] = 3
+    batch_size: Optional[int] = None
+    learning_rate_multiplier: Optional[float] = None
+    suffix: Optional[str] = None
+
+# AI Tools models
+class SummarizeRequest(BaseModel):
+    text: str
+    max_length: Optional[int] = 128
+    style: Optional[str] = "concise"  # concise, detailed, bullet_points
+
+class SentimentRequest(BaseModel):
+    text: str
+    detailed: Optional[bool] = False
+
+class EmailDraftRequest(BaseModel):
+    purpose: str
+    recipient: Optional[str] = None
+    tone: Optional[str] = "professional"
+    key_points: Optional[List[str]] = None
+    length: Optional[str] = "medium"
+    context: Optional[str] = None
+
+class WorkflowRequest(BaseModel):
+    task_description: str
+    constraints: Optional[List[str]] = None
+    tools_available: Optional[List[str]] = None
+
+# Integration models
+class IntegrationMessage(BaseModel):
+    plugin: str
+    channel: str
+    message: str
+    metadata: Optional[Dict[str, Any]] = None
+
+class WebhookPayload(BaseModel):
+    plugin: str
+    data: Dict[str, Any]
+
 # ----------------------------------------------------------------------
 # Core endpoint
 # ----------------------------------------------------------------------
@@ -226,7 +302,7 @@ async def chat_endpoint(request: ChatRequest):
                             detail="AI temporarily unavailable")
 
 # ----------------------------------------------------------------------
-# Non-streaming helper
+# Non-streaming helper (FIXED)
 # ----------------------------------------------------------------------
 async def get_complete_response(
     model: str,
@@ -255,13 +331,13 @@ async def get_complete_response(
 
     response = await asyncio.to_thread(call_openai)
 
-    # Defensive parsing
+    # Defensive parsing (FIXED: choices[0] instead of choices[0 abbandon)
     choices = getattr(response, "choices", None)
     if not choices or len(choices) == 0:
         logger.error("OpenAI returned no choices: %s", response)
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="AI returned an empty response")
 
-    first = choices[0 abbandon
+    first = choices[0]  # FIXED: removed "abbandon"
     message = first.get("message") if isinstance(first, dict) else getattr(first, "message", None)
     content = None
     if isinstance(message, dict):
@@ -301,7 +377,6 @@ async def stream_openai_response(
     session_id: Optional[str],
 ):
     full_response = ""
-
     try:
         def create_stream():
             kwargs: Dict[str, Any] = {
@@ -386,194 +461,12 @@ async def root():
 async def hello():
     return {"message": "Hello from Savrli AI!"}
 
-@app.get("/playground", response_class=HTMLResponse)
-async def playground():
-    playground_path = Path(__file__).parent.parent / "pages" / "playground.html"
-    if not playground_path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="Playground page not found")
-    with open(playground_path, "r", encoding="utf-8") as f:
-        html_content = f.read()
-    return HTMLResponse(content=html_content)
-
 # ----------------------------------------------------------------------
-# Integration models
+# Vision/Multimodal Endpoints (MERGED FROM BOTH BRANCHES)
 # ----------------------------------------------------------------------
-class IntegrationMessage(BaseModel):
-    plugin: str
-    channel: str
-    message: str
-    metadata: Optional[Dict[str, Any]] = None
-
-class WebhookPayload(BaseModel):
-    plugin: str
-    data: Dict[str, Any]
-
-# ----------------------------------------------------------------------
-# Integration generic endpoints
-# ----------------------------------------------------------------------
-@app.get("/integrations")
-async def list_integrations():
-    plugins = plugin_manager.list_plugins()
-    return {"integrations": plugins, "count": len(plugins)}
-
-@app.post("/integrations/send")
-async def send_integration_message(request: IntegrationMessage):
-    result = plugin_manager.send_message(
-        plugin_name=request.plugin,
-        channel=request.channel,
-        message=request.message,
-        **(request.metadata or {})
-    )
-    if not result.get("success"):
-        safe_msg = "Failed to send message"
-        err = result.get("error", "")
-        if any(k in str(err).lower() for k in ["not found", "disabled", "invalid", "missing", "configuration"]):
-            safe_msg = str(err)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=safe_msg)
-
-    return {
-        "success": result.get("success"),
-        "plugin": result.get("plugin"),
-        "result": result.get("result", {}),
-    }
-
-@app.post("/integrations/webhook")
-async def process_integration_webhook(request: WebhookPayload):
-    result = plugin_manager.process_webhook(
-        plugin_name=request.plugin,
-        webhook_data=request.data,
-    )
-    if not result.get("success"):
-        safe_msg = "Failed to process webhook"
-        err = result.get("error", "")
-        if any(k in str(err).lower() for k in ["not found", "disabled", "invalid", "missing", "configuration"]):
-            safe_msg = str(err)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=safe_msg)
-
-    return {
-        "success": result.get("success"),
-        "plugin": result.get("plugin"),
-        "result": result.get("result", {}),
-    }
-
-@app.get("/integrations/{plugin_name}/info")
-async def get_integration_info(plugin_name: str):
-    plugin = plugin_manager.get_plugin(plugin_name)
-    if not plugin:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Plugin {plugin_name} not found")
-    if hasattr(plugin, "get_api_info"):
-        return plugin.get_api_info()
-    return {
-        "plugin": plugin_name,
-        "enabled": plugin.is_enabled(),
-        "class": plugin.__class__.__name__,
-    }
-
-# ----------------------------------------------------------------------
-# Platform-specific convenience endpoints
-# ----------------------------------------------------------------------
-@app.post("/integrations/slack/send")
-async def slack_send_message(channel: str, message: str, thread_ts: Optional[str] = None):
-    metadata: Dict[str, Any] = {}
-    if thread_ts:
-        metadata["thread_ts"] = thread_ts
-    return await send_integration_message(
-        IntegrationMessage(plugin="slack", channel=channel, message=message, metadata=metadata)
-    )
-
-@app.post("/integrations/discord/send")
-async def discord_send_message(channel: str, message: str, embed: Optional[Dict[str, Any]] = None):
-    metadata: Dict[str, Any] = {}
-    if embed:
-        metadata["embed"] = embed
-    return await send_integration_message(
-        IntegrationMessage(plugin="discord", channel=channel, message=message, metadata=metadata)
-    )
-
-@app.post("/integrations/notion/create")
-async def notion_create_page(page_id: str, content: str, properties: Optional[Dict[str, Any]] = None):
-    metadata: Dict[str, Any] = {"operation": "create_page"}
-    if properties:
-        metadata["properties"] = properties
-    return await send_integration_message(
-        IntegrationMessage(plugin="notion", channel=page_id, message=content, metadata=metadata)
-    )
-
-@app.post("/integrations/google-docs/create")
-async def google_docs_create_document(title: str, content: str):
-    metadata = {"operation": "create_document", "title": title}
-    return await send_integration_message(
-        IntegrationMessage(plugin="google_docs", channel="new", message=content, metadata=metadata)
-    )
-
-@app.post("/integrations/google-docs/append")
-async def google_docs_append_text(document_id: str, content: str, index: Optional[int] = None):
-    """
-    Append text to a Google Docs document (convenience endpoint).
-
-    Args:
-        document_id: Google Docs document ID
-        content: Content to append
-        index: Optional insert position
-
-    Returns:
-        Operation result
-    """
-    try:
-        metadata = {"operation": "append_text"}
-        if index is not None:
-            metadata["index"] = index
-
-        return await send_integration_message(
-            IntegrationMessage(
-                plugin="google_docs",
-                channel=document_id,
-                message=content,
-                metadata=metadata
-            )
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception(f"Error in Google Docs append_text: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to append text to Google Docs document"
-        )
-
-# ============================================================================
-# Multi-Modal AI Endpoints
-# ============================================================================
-class VisionRequest(BaseModel):
-    """Request model for vision/image analysis"""
-    prompt: str
-    image_url: str
-    model: Optional[str] = "gpt-4-vision-preview"
-    max_tokens: Optional[int] = 1000
-
-class AudioRequest(BaseModel):
-    """Request model for audio transcription"""
-    audio_url: str
-    model: Optional[str] = "whisper-1"
-    language: Optional[str] = None
-
-class FineTuningRequest(BaseModel):
-    """Request model for fine-tuning configuration"""
-    model: str
-    training_file: str
-    validation_file: Optional[str] = None
-    n_epochs: Optional[int] = 3
-    batch_size: Optional[int] = None
-    learning_rate_multiplier: Optional[float] = None
-    suffix: Optional[str] = None
-
 @app.get("/ai/models")
 async def list_ai_models(model_type: Optional[str] = None):
-    """
-    List all available AI models with optional filtering by type.
-    """
+    """List all available AI models with optional filtering by type."""
     try:
         models = multimodal_processor.list_available_models(model_type=model_type)
         return {"models": models, "count": len(models)}
@@ -586,9 +479,7 @@ async def list_ai_models(model_type: Optional[str] = None):
 
 @app.get("/ai/models/{model_id}")
 async def get_model_info(model_id: str):
-    """
-    Get detailed information about a specific AI model.
-    """
+    """Get detailed information about a specific AI model."""
     try:
         model_info = multimodal_processor.get_model_info(model_id)
         return model_info
@@ -600,64 +491,175 @@ async def get_model_info(model_id: str):
                             detail="Failed to get model information")
 
 @app.post("/ai/vision")
-async def analyze_image(request: VisionRequest):
+async def vision_endpoint(request: VisionRequest):
     """
-    Analyze images using vision models.
+    Analyze images using GPT-4 Vision (merged implementation).
     """
-    try:
-        if not request.prompt or not request.prompt.strip():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="Prompt cannot be empty")
-        if not request.image_url or not request.image_url.strip():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="Image URL cannot be empty")
+    if not request.prompt.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Prompt cannot be empty")
+    if not request.image_url.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image URL cannot be empty")
 
-        result = multimodal_processor.process_vision(
-            prompt=request.prompt,
-            image_url=request.image_url,
-            model_id=request.model,
-            max_tokens=request.max_tokens
-        )
-        return {"success": True, "result": result, "model": request.model}
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    max_tokens = request.max_tokens if request.max_tokens is not None else 300
+    if max_tokens <= 0 or max_tokens > 2000:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="max_tokens must be between 1 and 2000")
+
+    try:
+        # Use multimodal processor if available, fallback to direct OpenAI call
+        try:
+            result = multimodal_processor.process_vision(
+                prompt=request.prompt,
+                image_url=request.image_url,
+                model_id=request.model,
+                max_tokens=max_tokens
+            )
+        except:
+            # Fallback to direct OpenAI API call
+            def call_vision_api():
+                return client.chat.completions.create(
+                    model=request.model,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": request.prompt},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": request.image_url}
+                                }
+                            ]
+                        }
+                    ],
+                    max_tokens=max_tokens
+                )
+
+            response = await asyncio.to_thread(call_vision_api)
+            result = response.choices[0].message.content.strip()
+
+        # Store in session history
+        if request.session_id:
+            conversation_history[request.session_id].append({
+                "role": "user",
+                "content": f"[Image: {request.image_url}] {request.prompt}",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            conversation_history[request.session_id].append({
+                "role": "assistant",
+                "content": result,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            trim_conversation_history(request.session_id)
+
+        return {
+            "response": result,
+            "image_url": request.image_url,
+            "model": request.model,
+            "session_id": request.session_id,
+            "success": True
+        }
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Error in vision processing: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="Failed to process image")
+        logger.exception("Error calling Vision API: %s", e)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Vision API temporarily unavailable")
+
+@app.post("/ai/image/generate")
+async def image_generate_endpoint(request: ImageGenerationRequest):
+    """
+    Generate images using DALL-E (merged implementation).
+    """
+    if not request.prompt.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Prompt cannot be empty")
+
+    if request.n <= 0 or request.n > 10:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="n must be between 1 and 10")
+
+    valid_sizes = ["256x256", "512x512", "1024x1024", "1792x1024", "1024x1792"]
+    if request.size not in valid_sizes:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"size must be one of: {', '.join(valid_sizes)}")
+
+    if request.quality not in ["standard", "hd"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="quality must be 'standard' or 'hd'")
+
+    try:
+        def call_dalle():
+            return client.images.generate(
+                model=request.model,
+                prompt=request.prompt,
+                n=request.n,
+                size=request.size,
+                quality=request.quality
+            )
+
+        response = await asyncio.to_thread(call_dalle)
+
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY,
+                                detail="Image generation returned no results")
+
+        images = [{"url": img.url, "revised_prompt": getattr(img, 'revised_prompt', None)}
+                  for img in response.data]
+
+        # Store in history if session_id provided
+        if request.session_id:
+            conversation_history[request.session_id].append({
+                "role": "user",
+                "content": f"[Generate Image] {request.prompt}",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            conversation_history[request.session_id].append({
+                "role": "assistant",
+                "content": f"[Generated {len(images)} image(s)]",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+            trim_conversation_history(request.session_id)
+
+        return {
+            "images": images,
+            "prompt": request.prompt,
+            "model": request.model,
+            "session_id": request.session_id,
+            "success": True
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error generating image: %s", e)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Image generation temporarily unavailable")
 
 @app.post("/ai/audio/transcribe")
-async def transcribe_audio(request: AudioRequest):
+async def audio_transcribe_endpoint(request: AudioTranscriptionRequest):
     """
-    Transcribe audio using Whisper or other audio models.
+    Transcribe audio using Whisper (merged implementation).
     """
-    try:
-        if not request.audio_url or not request.audio_url.strip():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail="Audio URL cannot be empty")
+    if not request.audio_url.strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Audio URL cannot be empty")
 
+    # Try multimodal processor first, fallback to 501
+    try:
         result = multimodal_processor.process_audio(
             audio_url=request.audio_url,
             model_id=request.model,
             language=request.language
         )
         return {"success": True, "result": result, "model": request.model}
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.exception(f"Error in audio transcription: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail="Failed to transcribe audio")
+    except:
+        # Fallback to 501 if not implemented
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Audio transcription requires file upload. Use multipart/form-data endpoint (coming soon)"
+        )
 
 @app.post("/ai/fine-tuning/configure")
 async def configure_fine_tuning(request: FineTuningRequest):
-    """
-    Configure fine-tuning for supported models.
-    """
+    """Configure fine-tuning for supported models."""
     try:
         config = FineTuningConfig(
             model_id=request.model,
@@ -670,8 +672,7 @@ async def configure_fine_tuning(request: FineTuningRequest):
         )
         is_valid, error_message = config.validate()
         if not is_valid:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=error_message)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_message)
 
         model_info = multimodal_processor.get_model_info(request.model)
         if not model_info.get("supports_fine_tuning"):
@@ -692,9 +693,7 @@ async def configure_fine_tuning(request: FineTuningRequest):
 
 @app.get("/ai/models/fine-tunable")
 async def list_fine_tunable_models():
-    """
-    List all models that support fine-tuning.
-    """
+    """List all models that support fine-tuning."""
     try:
         models = model_registry.list_models(supports_fine_tuning=True)
         return {"models": models, "count": len(models)}
@@ -703,30 +702,40 @@ async def list_fine_tunable_models():
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail="Failed to list fine-tunable models")
 
-# ============================================================================
+# ----------------------------------------------------------------------
 # Advanced AI Tools Endpoints
-# ============================================================================
-class SummarizeRequest(BaseModel):
-    text: str
-    max_length: Optional[int] = 128
-    style: Optional[str] = "concise"  # concise, detailed, bullet_points
-
-class SentimentRequest(BaseModel):
-    text: str
-    detailed: Optional[bool] = False
-
-class EmailDraftRequest(BaseModel):
-    purpose: str
-    recipient: Optional[str] = None
-    tone: Optional[str] = "professional"
-    key_points: Optional[List[str]] = None
-    length: Optional[str] = "medium"
-    context: Optional[str] = None
-
-class WorkflowRequest(BaseModel):
-    task_description: str
-    constraints: Optional[List[str]] = None
-    tools_available: Optional[List[str]] = None
+# ----------------------------------------------------------------------
+@app.get("/ai/tools")
+async def list_ai_tools():
+    return {
+        "tools": [
+            {
+                "name": "summarize",
+                "endpoint": "/ai/tools/summarize",
+                "description": "Summarize text with configurable length and style",
+                "capabilities": ["concise summary", "detailed summary", "bullet points"]
+            },
+            {
+                "name": "sentiment",
+                "endpoint": "/ai/tools/sentiment",
+                "description": "Analyze sentiment and emotions in text",
+                "capabilities": ["sentiment detection", "emotion analysis", "tone identification"]
+            },
+            {
+                "name": "email_draft",
+                "endpoint": "/ai/tools/email/draft",
+                "description": "Generate professional email drafts",
+                "capabilities": ["email composition", "tone adjustment", "multi-style support"]
+            },
+            {
+                "name": "workflow",
+                "endpoint": "/ai/tools/workflow/suggest",
+                "description": "Suggest optimal workflows for tasks",
+                "capabilities": ["workflow planning", "task optimization", "automation suggestions"]
+            }
+        ],
+        "count": 4
+    }
 
 @app.post("/ai/tools/summarize")
 async def summarize_text(request: SummarizeRequest):
@@ -834,37 +843,18 @@ async def suggest_workflow(request: WorkflowRequest):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail="Failed to suggest workflow")
 
-@app.get("/ai/tools")
-async def list_ai_tools():
-    return {
-        "tools": [
-            {
-                "name": "summarize",
-                "endpoint": "/ai/tools/summarize",
-                "description": "Summarize text with configurable length and style",
-                "capabilities": ["concise summary", "detailed summary", "bullet points"]
-            },
-            {
-                "name": "sentiment",
-                "endpoint": "/ai/tools/sentiment",
-                "description": "Analyze sentiment and emotions in text",
-                "capabilities": ["sentiment detection", "emotion analysis", "tone identification"]
-            },
-            {
-                "name": "email_draft",
-                "endpoint": "/ai/tools/email/draft",
-                "description": "Generate professional email drafts",
-                "capabilities": ["email composition", "tone adjustment", "multi-style support"]
-            },
-            {
-                "name": "workflow",
-                "endpoint": "/ai/tools/workflow/suggest",
-                "description": "Suggest optimal workflows for tasks",
-                "capabilities": ["workflow planning", "task optimization", "automation suggestions"]
-            }
-        ],
-        "count": 4
-    }
+# ----------------------------------------------------------------------
+# UI Pages
+# ----------------------------------------------------------------------
+@app.get("/playground", response_class=HTMLResponse)
+async def playground():
+    playground_path = Path(__file__).parent.parent / "pages" / "playground.html"
+    if not playground_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Playground page not found")
+    with open(playground_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+    return HTMLResponse(content=html_content)
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard():
@@ -875,3 +865,129 @@ async def dashboard():
     with open(dashboard_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     return HTMLResponse(content=html_content)
+
+# ----------------------------------------------------------------------
+# Integration generic endpoints
+# ----------------------------------------------------------------------
+@app.get("/integrations")
+async def list_integrations():
+    plugins = plugin_manager.list_plugins()
+    return {"integrations": plugins, "count": len(plugins)}
+
+@app.post("/integrations/send")
+async def send_integration_message(request: IntegrationMessage):
+    result = plugin_manager.send_message(
+        plugin_name=request.plugin,
+        channel=request.channel,
+        message=request.message,
+        **(request.metadata or {})
+    )
+    if not result.get("success"):
+        safe_msg = "Failed to send message"
+        err = result.get("error", "")
+        if any(k in str(err).lower() for k in ["not found", "disabled", "invalid", "missing", "configuration"]):
+            safe_msg = str(err)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=safe_msg)
+
+    return {
+        "success": result.get("success"),
+        "plugin": result.get("plugin"),
+        "result": result.get("result", {}),
+    }
+
+@app.post("/integrations/webhook")
+async def process_integration_webhook(request: WebhookPayload):
+    result = plugin_manager.process_webhook(
+        plugin_name=request.plugin,
+        webhook_data=request.data,
+    )
+    if not result.get("success"):
+        safe_msg = "Failed to process webhook"
+        err = result.get("error", "")
+        if any(k in str(err).lower() for k in ["not found", "disabled", "invalid", "missing", "configuration"]):
+            safe_msg = str(err)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=safe_msg)
+
+    return {
+        "success": result.get("success"),
+        "plugin": result.get("plugin"),
+        "result": result.get("result", {}),
+    }
+
+@app.get("/integrations/{plugin_name}/info")
+async def get_integration_info(plugin_name: str):
+    plugin = plugin_manager.get_plugin(plugin_name)
+    if not plugin:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Plugin {plugin_name} not found")
+    if hasattr(plugin, "get_api_info"):
+        return plugin.get_api_info()
+    return {
+        "plugin": plugin_name,
+        "enabled": plugin.is_enabled(),
+        "class": plugin.__class__.__name__,
+    }
+
+# ----------------------------------------------------------------------
+# Platform-specific convenience endpoints
+# ----------------------------------------------------------------------
+@app.post("/integrations/slack/send")
+async def slack_send_message(channel: str, message: str, thread_ts: Optional[str] = None):
+    metadata: Dict[str, Any] = {}
+    if thread_ts:
+        metadata["thread_ts"] = thread_ts
+    return await send_integration_message(
+        IntegrationMessage(plugin="slack", channel=channel, message=message, metadata=metadata)
+    )
+
+@app.post("/integrations/discord/send")
+async def discord_send_message(channel: str, message: str, embed: Optional[Dict[str, Any]] = None):
+    metadata: Dict[str, Any] = {}
+    if embed:
+        metadata["embed"] = embed
+    return await send_integration_message(
+        IntegrationMessage(plugin="discord", channel=channel, message=message, metadata=metadata)
+    )
+
+@app.post("/integrations/notion/create")
+async def notion_create_page(page_id: str, content: str, properties: Optional[Dict[str, Any]] = None):
+    metadata: Dict[str, Any] = {"operation": "create_page"}
+    if properties:
+        metadata["properties"] = properties
+    return await send_integration_message(
+        IntegrationMessage(plugin="notion", channel=page_id, message=content, metadata=metadata)
+    )
+
+@app.post("/integrations/google-docs/create")
+async def google_docs_create_document(title: str, content: str):
+    metadata = {"operation": "create_document", "title": title}
+    return await send_integration_message(
+        IntegrationMessage(plugin="google_docs", channel="new", message=content, metadata=metadata)
+    )
+
+@app.post("/integrations/google-docs/append")
+async def google_docs_append_text(document_id: str, content: str, index: Optional[int] = None):
+    """
+    Append text to a Google Docs document (convenience endpoint).
+    """
+    try:
+        metadata = {"operation": "append_text"}
+        if index is not None:
+            metadata["index"] = index
+
+        return await send_integration_message(
+            IntegrationMessage(
+                plugin="google_docs",
+                channel=document_id,
+                message=content,
+                metadata=metadata
+            )
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error in Google Docs append_text: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to append text to Google Docs document"
+        )
