@@ -512,6 +512,14 @@ async def configure_fine_tuning(request: FineTuningRequest):
     return {"success": True, "message": "Validated", "config": config.to_dict()}
 
 # ----------------------------------------------------------------------
+# Import Playground Router
+# ----------------------------------------------------------------------
+from api.playground import router as playground_router
+
+# Mount playground router
+app.include_router(playground_router)
+
+# ----------------------------------------------------------------------
 # AI Tools, UI, Integrations, Resource Management
 # ----------------------------------------------------------------------
 # [All other endpoints from main branch: /ai/tools/*, /playground, integrations, export/import, etc.]
