@@ -1,7 +1,7 @@
 
 ---
 
-## `api/index.py` (Final Version)
+### 2. `api/index.py`
 
 ```python
 from fastapi import FastAPI, HTTPException, status
@@ -17,24 +17,27 @@ from datetime import datetime, timezone
 from collections import defaultdict
 from pathlib import Path
 
-# Import plugin system
+# ----------------------------------------------------------------------
+# Imports – plugins
+# ----------------------------------------------------------------------
 from integrations.plugin_base import PluginManager
 from integrations.slack_plugin import SlackPlugin
 from integrations.discord_plugin import DiscordPlugin
 from integrations.notion_plugin import NotionPlugin
 from integrations.google_docs_plugin import GoogleDocsPlugin
 
-# Import multi-modal AI capabilities
-from ai_multimodal import (
-    MultiModalProcessor, FineTuningConfig, model_registry
-)
-
-# Import advanced AI tools
+# ----------------------------------------------------------------------
+# Imports – multi-modal & tools
+# ----------------------------------------------------------------------
+from ai_multimodal import MultiModalProcessor, FineTuningConfig, model_registry
 from tools.summarizer import Summarizer
 from tools.sentiment_analysis import SentimentAnalyzer
 from tools.email_drafter import EmailDrafter
 from tools.workflow_automation import WorkflowAutomation
 
+# ----------------------------------------------------------------------
+# FastAPI app
+# ----------------------------------------------------------------------
 app = FastAPI()
 logger = logging.getLogger("api")
 logging.basicConfig(level=logging.INFO)
@@ -47,14 +50,10 @@ if not OPENAI_API_KEY:
     logger.error("OPENAI_API_KEY is not set.")
     raise RuntimeError("OPENAI_API_KEY environment variable is required")
 
-try:
-    DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
-    DEFAULT_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
-    DEFAULT_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
-    DEFAULT_CONTEXT_WINDOW = int(os.getenv("DEFAULT_CONTEXT_WINDOW", "10"))
-except ValueError as e:
-    logger.error("Invalid env var: %s", e)
-    raise RuntimeError(f"Invalid configuration: {e}")
+DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+DEFAULT_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
+DEFAULT_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+DEFAULT_CONTEXT_WINDOW = int(os.getenv("DEFAULT_CONTEXT_WINDOW", "10"))
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -63,20 +62,20 @@ conversation_history: Dict[str, List[Dict]] = defaultdict(list)
 MAX_HISTORY_PER_SESSION = int(os.getenv("MAX_HISTORY_PER_SESSION", "20"))
 
 # ----------------------------------------------------------------------
-# Plugin manager & registration + multi-modal & tools
+# Plugin manager & registration
 # ----------------------------------------------------------------------
 plugin_manager = PluginManager(ai_system=client)
 
-# Initialize multi-modal processor
+# Multi-modal processor
 multimodal_processor = MultiModalProcessor(openai_client=client)
 
-# Initialize advanced AI tools
+# Advanced AI tools
 summarizer = Summarizer()
 sentiment_analyzer = SentimentAnalyzer()
 email_drafter = EmailDrafter()
 workflow_automation = WorkflowAutomation()
 
-# Slack
+# ---- Slack ----
 slack_config = {
     "bot_token": os.getenv("SLACK_BOT_TOKEN"),
     "signing_secret": os.getenv("SLACK_SIGNING_SECRET"),
@@ -86,7 +85,7 @@ slack_plugin = SlackPlugin(ai_system=client, config=slack_config)
 if slack_config.get("bot_token"):
     plugin_manager.register_plugin("slack", slack_plugin)
 
-# Discord
+# ---- Discord ----
 discord_config = {
     "bot_token": os.getenv("DISCORD_BOT_TOKEN"),
     "application_id": os.getenv("DISCORD_APP_ID"),
@@ -97,7 +96,7 @@ discord_plugin = DiscordPlugin(ai_system=client, config=discord_config)
 if discord_config.get("bot_token"):
     plugin_manager.register_plugin("discord", discord_plugin)
 
-# Notion
+# ---- Notion ----
 notion_config = {
     "api_token": os.getenv("NOTION_API_TOKEN"),
     "enabled": os.getenv("NOTION_ENABLED", "false").lower() == "true",
@@ -106,7 +105,7 @@ notion_plugin = NotionPlugin(ai_system=client, config=notion_config)
 if notion_config.get("api_token"):
     plugin_manager.register_plugin("notion", notion_plugin)
 
-# Google Docs
+# ---- Google Docs ----
 google_docs_config = {
     "credentials": os.getenv("GOOGLE_DOCS_CREDENTIALS"),
     "enabled": os.getenv("GOOGLE_DOCS_ENABLED", "false").lower() == "true",
@@ -208,33 +207,28 @@ class WebhookPayload(BaseModel):
     data: Dict[str, Any]
 
 # ----------------------------------------------------------------------
-# Core endpoint
+# Core endpoint – chat
 # ----------------------------------------------------------------------
 @app.post("/ai/chat")
 async def chat_endpoint(request: ChatRequest):
+    # ---- validation ----
     if not request.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
-
     max_tokens = request.max_tokens or DEFAULT_MAX_TOKENS
     if not (1 <= max_tokens <= 2000):
         raise HTTPException(status_code=400, detail="max_tokens must be between 1 and 2000")
-
     temperature = request.temperature or DEFAULT_TEMPERATURE
     if not (0.0 <= temperature <= 2.0):
         raise HTTPException(status_code=400, detail="temperature must be between 0.0 and 2.0")
-
     top_p = request.top_p
     if top_p is not None and not (0.0 <= top_p <= 1.0):
         raise HTTPException(status_code=400, detail="top_p must be between 0.0 and 1.0")
-
     frequency_penalty = request.frequency_penalty
     if frequency_penalty is not None and not (-2.0 <= frequency_penalty <= 2.0):
         raise HTTPException(status_code=400, detail="frequency_penalty must be between -2.0 and 2.0")
-
     presence_penalty = request.presence_penalty
     if presence_penalty is not None and not (-2.0 <= presence_penalty <= 2.0):
         raise HTTPException(status_code=400, detail="presence_penalty must be between -2.0 and 2.0")
-
     context_window = request.context_window or DEFAULT_CONTEXT_WINDOW
     if not (0 <= context_window <= 50):
         raise HTTPException(status_code=400, detail="context_window must be between 0 and 50")
@@ -260,13 +254,15 @@ async def chat_endpoint(request: ChatRequest):
     try:
         if request.stream:
             return StreamingResponse(
-                stream_openai_response(model, messages, max_tokens, temperature, top_p,
-                                      frequency_penalty, presence_penalty, session_id),
+                stream_openai_response(model, messages, max_tokens, temperature,
+                                       top_p, frequency_penalty,
+                                       presence_penalty, session_id),
                 media_type="text/event-stream",
             )
         else:
             return await get_complete_response(model, messages, max_tokens, temperature,
-                                              top_p, frequency_penalty, presence_penalty, session_id)
+                                               top_p, frequency_penalty,
+                                               presence_penalty, session_id)
     except Exception as e:
         logger.exception("OpenAI error: %s", e)
         raise HTTPException(status_code=503, detail="AI temporarily unavailable")
@@ -278,11 +274,8 @@ async def get_complete_response(model, messages, max_tokens, temperature, top_p,
                                 frequency_penalty, presence_penalty, session_id):
     def call():
         kwargs = {k: v for k, v in {
-            "model": model,
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "top_p": top_p,
+            "model": model, "messages": messages, "max_tokens": max_tokens,
+            "temperature": temperature, "top_p": top_p,
             "frequency_penalty": frequency_penalty,
             "presence_penalty": presence_penalty,
         }.items() if v is not None}
@@ -330,12 +323,11 @@ async def stream_openai_response(model, messages, max_tokens, temperature, top_p
 # ----------------------------------------------------------------------
 @app.get("/ai/history/{session_id}")
 async def get_conversation_history(session_id: str, limit: Optional[int] = 50):
-    if session_id not in conversation_history:
-        return {"session_id": session_id, "messages": []}
-    msgs = conversation_history[session_id]
+    msgs = conversation_history.get(session_id, [])
     if limit:
         msgs = msgs[-limit:]
-    return {"session_id": session_id, "messages": msgs, "total_messages": len(conversation_history[session_id])}
+    return {"session_id": session_id, "messages": msgs,
+            "total_messages": len(conversation_history.get(session_id, []))}
 
 @app.delete("/ai/history/{session_id}")
 async def clear_conversation_history(session_id: str):
@@ -428,7 +420,7 @@ async def generate_image(request: ImageGenerationRequest):
 async def transcribe_audio(request: AudioRequest):
     raise HTTPException(status_code=501, detail="Audio transcription not implemented yet")
 
-@app.post("/ai/fine-tuning/configure")
+@app.post("/ai/fine-tune/configure")
 async def configure_fine_tuning(request: FineTuningRequest):
     config = FineTuningConfig(
         model_id=request.model,
@@ -537,7 +529,8 @@ async def dashboard():
 # ----------------------------------------------------------------------
 @app.get("/integrations")
 async def list_integrations():
-    return {"integrations": plugin_manager.list_plugins(), "count": len(plugin_manager.list_plugins())}
+    return {"integrations": plugin_manager.list_plugins(),
+            "count": len(plugin_manager.list_plugins())}
 
 @app.post("/integrations/send")
 async def send_integration_message(request: IntegrationMessage):
@@ -563,33 +556,39 @@ async def get_integration_info(plugin_name: str):
     plugin = plugin_manager.get_plugin(plugin_name)
     if not plugin:
         raise HTTPException(status_code=404, detail="Plugin not found")
-    return plugin.get_api_info() if hasattr(plugin, "get_api_info") else {
-        "plugin": plugin_name, "enabled": plugin.is_enabled(), "class": plugin.__class__.__name__
-    }
+    return (plugin.get_api_info() if hasattr(plugin, "get_api_info")
+            else {"plugin": plugin_name, "enabled": plugin.is_enabled(),
+                  "class": plugin.__class__.__name__})
 
 # Platform-specific convenience
 @app.post("/integrations/slack/send")
 async def slack_send(channel: str, message: str, thread_ts: Optional[str] = None):
     metadata = {"thread_ts": thread_ts} if thread_ts else {}
-    return await send_integration_message(IntegrationMessage(plugin="slack", channel=channel, message=message, metadata=metadata))
+    return await send_integration_message(IntegrationMessage(plugin="slack", channel=channel,
+                                                          message=message, metadata=metadata))
 
 @app.post("/integrations/discord/send")
 async def discord_send(channel: str, message: str, embed: Optional[Dict] = None):
     metadata = {"embed": embed} if embed else {}
-    return await send_integration_message(IntegrationMessage(plugin="discord", channel=channel, message=message, metadata=metadata))
+    return await send_integration_message(IntegrationMessage(plugin="discord", channel=channel,
+                                                          message=message, metadata=metadata))
 
 @app.post("/integrations/notion/create")
 async def notion_create(page_id: str, content: str, properties: Optional[Dict] = None):
     metadata = {"operation": "create_page", "properties": properties or {}}
-    return await send_integration_message(IntegrationMessage(plugin="notion", channel=page_id, message=content, metadata=metadata))
+    return await send_integration_message(IntegrationMessage(plugin="notion", channel=page_id,
+                                                          message=content, metadata=metadata))
 
 @app.post("/integrations/google-docs/create")
 async def google_docs_create(title: str, content: str):
-    return await send_integration_message(IntegrationMessage(plugin="google_docs", channel="new", message=content, metadata={"operation": "create_document", "title": title}))
+    return await send_integration_message(IntegrationMessage(plugin="google_docs", channel="new",
+                                                          message=content,
+                                                          metadata={"operation": "create_document", "title": title}))
 
 @app.post("/integrations/google-docs/append")
 async def google_docs_append(document_id: str, content: str, index: Optional[int] = None):
     metadata = {"operation": "append_text"}
     if index is not None:
         metadata["index"] = index
-    return await send_integration_message(IntegrationMessage(plugin="google_docs", channel=document_id, message=content, metadata=metadata))
+    return await send_integration_message(IntegrationMessage(plugin="google_docs", channel=document_id,
+                                                          message=content, metadata=metadata))
