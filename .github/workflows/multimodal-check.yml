@@ -53,6 +53,8 @@ jobs:
   lint:
     name: Lint Code (flake8)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
@@ -87,6 +89,8 @@ jobs:
   test-multimodal:
     name: Test Multimodal Features
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     # TODO: Add matrix strategy for multiple Python versions
     # strategy:
@@ -141,6 +145,8 @@ jobs:
   test-all:
     name: Run All Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
