@@ -110,6 +110,9 @@ The API supports both stateless (one-off) and stateful (session-based) conversat
 
 ### **Core Features**
 
+✅ **Multi-Modal AI** - Support for text, vision/image, and audio processing  
+✅ **Model Management** - 6 pre-configured models with selection and fine-tuning  
+✅ **Advanced AI Tools** - Summarization, sentiment analysis, email drafting, workflow automation  
 ✅ **Custom AI Behavior** - Define assistant personality via system instructions  
 ✅ **Conversation History** - Multi-turn conversations with session management  
 ✅ **Streaming Responses** - Real-time token streaming for better UX  
@@ -117,8 +120,180 @@ The API supports both stateless (one-off) and stateful (session-based) conversat
 ✅ **Input Validation** - Comprehensive error handling and validation  
 ✅ **History Management** - View and clear conversation history via API  
 ✅ **Interactive Playground** - Visual interface for testing AI features  
+✅ **Enhanced Dashboard** - Real-time metrics, analytics, and theme toggle  
 ✅ **Platform Integrations** - Connect with Slack, Discord, Notion, and Google Docs  
-✅ **Plugin Architecture** - Extensible system for third-party integrations  
+✅ **Plugin Architecture** - Extensible system for third-party integrations
+
+---
+
+## 🤖 Multi-Modal AI Capabilities
+
+Savrli AI supports advanced multi-modal AI processing including text, vision/image, and audio.
+
+### **Available Models**
+
+- **Text Models:** GPT-3.5 Turbo, GPT-4, GPT-4 Turbo
+- **Vision Models:** GPT-4 Vision Preview
+- **Audio Models:** Whisper-1
+- **Multimodal Models:** GPT-4 Omni
+
+### **Model Management**
+
+```bash
+# List all available models
+curl https://your-api-url/ai/models
+
+# Get specific model info
+curl https://your-api-url/ai/models/gpt-4
+
+# List fine-tunable models
+curl https://your-api-url/ai/models/fine-tunable
+```
+
+### **Vision/Image Analysis**
+
+```bash
+# Analyze an image
+curl -X POST https://your-api-url/ai/vision \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Describe this image in detail",
+    "image_url": "https://example.com/image.jpg",
+    "model": "gpt-4-vision-preview"
+  }'
+```
+
+### **Audio Transcription**
+
+```bash
+# Transcribe audio
+curl -X POST https://your-api-url/ai/audio/transcribe \
+  -H "Content-Type: application/json" \
+  -d '{
+    "audio_url": "https://example.com/audio.mp3",
+    "language": "en"
+  }'
+```
+
+### **Fine-Tuning Configuration**
+
+```bash
+# Configure model fine-tuning
+curl -X POST https://your-api-url/ai/fine-tuning/configure \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-3.5-turbo",
+    "training_file": "file-abc123",
+    "n_epochs": 3
+  }'
+```
+
+---
+
+## 🛠️ Advanced AI Tools
+
+Savrli AI includes powerful AI-powered tools for common tasks.
+
+### **Text Summarization**
+
+```bash
+# Summarize text
+curl -X POST https://your-api-url/ai/tools/summarize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Your long text here...",
+    "max_length": 128,
+    "style": "concise"
+  }'
+```
+
+**Styles:** `concise`, `detailed`, `bullet_points`
+
+### **Sentiment Analysis**
+
+```bash
+# Analyze sentiment
+curl -X POST https://your-api-url/ai/tools/sentiment \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "I love this product!",
+    "detailed": true
+  }'
+```
+
+**Returns:** Sentiment (positive/negative/neutral), score (0-100), emotions, tone
+
+### **Email Drafting**
+
+```bash
+# Generate email draft
+curl -X POST https://your-api-url/ai/tools/email/draft \
+  -H "Content-Type: application/json" \
+  -d '{
+    "purpose": "Follow up on meeting",
+    "tone": "professional",
+    "length": "medium",
+    "key_points": ["Discuss next steps", "Schedule follow-up"]
+  }'
+```
+
+**Tones:** `professional`, `casual`, `friendly`, `formal`  
+**Lengths:** `short`, `medium`, `long`
+
+### **Workflow Automation**
+
+```bash
+# Get workflow suggestions
+curl -X POST https://your-api-url/ai/tools/workflow/suggest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_description": "Deploy application to production",
+    "constraints": ["Must complete in 2 hours"],
+    "tools_available": ["GitHub Actions", "Docker", "AWS"]
+  }'
+```
+
+### **List All Tools**
+
+```bash
+# Get all available tools
+curl https://your-api-url/ai/tools
+```
+
+---
+
+## 📊 Enhanced Dashboard
+
+Access the comprehensive dashboard for real-time monitoring and management.
+
+### **Access the Dashboard**
+
+```
+http://localhost:8000/dashboard
+# or
+https://your-project.vercel.app/dashboard
+```
+
+### **Dashboard Features**
+
+🎨 **Theme Toggle** - Switch between light and dark modes  
+📈 **Real-Time Statistics** - Track requests, models, response times, and sessions  
+🤖 **Model Overview** - View all available models with capabilities  
+📊 **Usage Analytics** - Visual charts showing tool usage distribution  
+⚡ **Performance Metrics** - Monitor API health and model availability  
+🔌 **Integration Status** - Track status of all platform integrations  
+📱 **Responsive Design** - Optimized for desktop, tablet, and mobile  
+🔄 **Auto-Refresh** - Live updates every 10 seconds
+
+### **Dashboard Sections**
+
+1. **Statistics Cards** - Quick metrics overview
+2. **Available Models** - Model registry with filtering
+3. **Recent Activity** - Activity feed with timestamps
+4. **Usage by Tool** - Visual progress bars
+5. **AI Tools** - Tool status and descriptions
+6. **Performance Metrics** - Health indicators
+7. **Integration Status** - Platform connection status
 
 ---
 
@@ -198,6 +373,8 @@ The playground is built with vanilla HTML/CSS/JavaScript for easy customization:
 
 ## 🔌 API Endpoints
 
+### **Core Chat Endpoints**
+
 ### 1. **Chat Endpoint**
 
 `POST /ai/chat`
@@ -216,37 +393,125 @@ Retrieve conversation history for a specific session.
 
 Clear all conversation history for a specific session.
 
-### 4. **Interactive Playground**
+---
+
+### **Multi-Modal AI Endpoints**
+
+### 4. **List AI Models**
+
+`GET /ai/models?model_type=text`
+
+List all available AI models with optional filtering by type.
+
+### 5. **Get Model Information**
+
+`GET /ai/models/{model_id}`
+
+Get detailed information about a specific model.
+
+### 6. **Analyze Image (Vision)**
+
+`POST /ai/vision`
+
+Analyze images using vision-capable models.
+
+### 7. **Transcribe Audio**
+
+`POST /ai/audio/transcribe`
+
+Transcribe audio files using Whisper or other audio models.
+
+### 8. **Configure Fine-Tuning**
+
+`POST /ai/fine-tuning/configure`
+
+Configure fine-tuning for supported models.
+
+### 9. **List Fine-Tunable Models**
+
+`GET /ai/models/fine-tunable`
+
+List all models that support fine-tuning.
+
+---
+
+### **Advanced AI Tools Endpoints**
+
+### 10. **List AI Tools**
+
+`GET /ai/tools`
+
+List all available AI tools and their capabilities.
+
+### 11. **Summarize Text**
+
+`POST /ai/tools/summarize`
+
+Summarize text with configurable length and style.
+
+### 12. **Analyze Sentiment**
+
+`POST /ai/tools/sentiment`
+
+Analyze sentiment and emotions in text.
+
+### 13. **Draft Email**
+
+`POST /ai/tools/email/draft`
+
+Generate professional email drafts.
+
+### 14. **Suggest Workflow**
+
+`POST /ai/tools/workflow/suggest`
+
+Get AI-suggested workflows for tasks.
+
+---
+
+### **Dashboard & Playground**
+
+### 15. **Interactive Playground**
 
 `GET /playground`
 
 Serves the interactive demo page for testing AI features in a browser.
 
-### 5. **List Integrations**
+### 16. **Enhanced Dashboard**
+
+`GET /dashboard`
+
+Serves the comprehensive dashboard with real-time metrics and analytics.
+
+---
+
+### **Integration Endpoints**
+
+### 17. **List Integrations**
 
 `GET /integrations`
 
 Lists all available integration plugins and their status.
 
-### 6. **Send Integration Message**
+### 18. **Send Integration Message**
 
 `POST /integrations/send`
 
 Send a message through a specific integration plugin (Slack, Discord, Notion, Google Docs).
 
-### 7. **Process Integration Webhook**
+### 19. **Process Integration Webhook**
 
 `POST /integrations/webhook`
 
 Process incoming webhooks from integration platforms.
 
-### 8. **Get Integration Info**
+### 20. **Get Integration Info**
 
 `GET /integrations/{plugin_name}/info`
 
 Get detailed information about a specific integration plugin.
 
-### 9. **Platform-Specific Endpoints**
+### 21. **Platform-Specific Endpoints**
 
 - `POST /integrations/slack/send` - Send message to Slack
 - `POST /integrations/discord/send` - Send message to Discord
@@ -707,6 +972,56 @@ Contributions are welcome! Please follow these steps:
 5. Commit your changes (`git commit -m 'Add new feature'`)
 6. Push to your branch (`git push origin feature/your-feature`)
 7. Open a Pull Request
+
+For detailed guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## 🗺️ Roadmap
+
+Savrli AI is continuously evolving. Here's what we're working on:
+
+### ✅ **Version 2.0 (Current)**
+- Multi-modal AI support (text, vision, audio)
+- Advanced AI tools (summarization, sentiment, email, workflow)
+- Enhanced dashboard with real-time metrics
+- Model management and fine-tuning
+- 6 pre-configured AI models
+
+### 🔜 **Version 2.1 (Next)**
+- Complete API reference documentation
+- Expanded integration examples
+- Tutorial videos and guides
+- Community templates
+
+### 💡 **Version 3.0 (Future)**
+- Real-time analytics and monitoring
+- Workflow builder UI
+- Enhanced security features
+- Team collaboration
+- Mobile applications
+
+For detailed roadmap and milestones, see [ROADMAP.md](ROADMAP.md).
+
+---
+
+## ⭐ Key Features at a Glance
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Multi-Modal AI | Text, vision, audio processing | ✅ Available |
+| Model Management | 6 models with selection & fine-tuning | ✅ Available |
+| Text Summarization | 3 styles, configurable length | ✅ Available |
+| Sentiment Analysis | Detailed emotion & tone analysis | ✅ Available |
+| Email Drafting | Professional email generation | ✅ Available |
+| Workflow Automation | AI-suggested task workflows | ✅ Available |
+| Dashboard | Real-time metrics & analytics | ✅ Available |
+| Slack Integration | Messages, events, commands | ✅ Available |
+| Discord Integration | Messages, webhooks, interactions | ✅ Available |
+| Notion Integration | Pages, databases management | ✅ Available |
+| Google Docs | Document creation & editing | ✅ Available |
+| Real-time Analytics | Usage tracking & monitoring | 🔜 Coming Soon |
+| Mobile Apps | iOS & Android | 🔮 Planned |
 
 ---
 
