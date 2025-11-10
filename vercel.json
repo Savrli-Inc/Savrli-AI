@@ -1,4 +1,5 @@
 {
+  "version": 2,
   "builds": [
     {
       "src": "api/index.py",
@@ -9,6 +10,34 @@
     {
       "src": "/public/(.*)",
       "dest": "/public/$1"
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/ai/(.*)",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/docs",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/playground",
+      "dest": "/pages/playground.html"
+    },
+    {
+      "src": "/dashboard",
+      "dest": "/pages/dashboard.html"
+    },
+    {
+      "src": "/chat.html",
+      "dest": "/public/chat.html"
+    },
+    {
+      "src": "/",
+      "dest": "/public/index.html"
     },
     {
       "src": "/(.*)",
