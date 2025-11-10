@@ -38,6 +38,10 @@ on:
 #   group: ${{ github.workflow }}-${{ github.ref }}
 #   cancel-in-progress: true
 
+# Limit permissions for security
+permissions:
+  contents: read
+
 jobs:
   # ==========================================================================
   # Job: Run Multi-Modal Tests
