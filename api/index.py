@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, status, File, UploadFile
 from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from openai import OpenAI
 import os
@@ -152,6 +153,12 @@ async def lifespan(app: FastAPI):
     logger.info("Server shutting down")
 
 app = FastAPI(lifespan=lifespan)
+
+# Mount static files directory for demo page and other static assets
+# TODO: Expand static file organization as needed (issue #36)
+static_path = Path(__file__).parent.parent / "static"
+if static_path.exists():
+    app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
 # ----------------------------------------------------------------------
 # Helpers
@@ -519,11 +526,22 @@ async def configure_fine_tuning(request: FineTuningRequest):
 
 @app.get("/")
 async def root():
-    return {"message": "Savrli AI API Running", "playground": "/playground", "docs": "/docs"}
+    return {"message": "Savrli AI API Running", "playground": "/playground", "demo": "/demo", "docs": "/docs"}
 
 @app.get("/playground", response_class=HTMLResponse)
 async def playground():
     path = Path(__file__).parent.parent / "pages" / "playground.html"
     return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Playground not found"
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo_page():
+    """
+    Serve the demo page for manual testing
+    
+    Simple demo page with sample prompts for testing /ai/chat endpoint.
+    TODO: Expand functionality per issue #36
+    """
+    path = Path(__file__).parent.parent / "pages" / "demo.html"
+    return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Demo page not found"
 
 # ... [rest of tools, integrations, export/import, etc. – unchanged from main]
