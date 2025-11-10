@@ -466,6 +466,187 @@
             background: var(--text-muted);
         }
         
+        /* Dashboard Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            transition: var(--transition);
+        }
+        
+        .stat-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .stat-icon {
+            font-size: 1.25rem;
+        }
+        
+        /* Charts */
+        .chart-container {
+            background: var(--surface-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-md);
+            height: 200px;
+            position: relative;
+        }
+        
+        .chart-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        #messageChart {
+            width: 100%;
+            height: 150px;
+        }
+        
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none;
+            padding: var(--spacing-md);
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 0.875rem;
+        }
+        
+        .typing-indicator.active {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: typingDot 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typingDot {
+            0%, 60%, 100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+            30% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+        
+        /* Message Actions */
+        .message-actions {
+            display: flex;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-sm);
+            opacity: 0;
+            transition: var(--transition);
+        }
+        
+        .message:hover .message-actions {
+            opacity: 1;
+        }
+        
+        .action-btn {
+            padding: 0.25rem 0.5rem;
+            background: var(--surface-light);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: var(--transition);
+        }
+        
+        .action-btn:hover {
+            background: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .quick-action-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: var(--surface-light);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .quick-action-btn:hover {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+        
+        /* Export Button */
+        .export-btn {
+            background: var(--surface-light);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: var(--transition);
+        }
+        
+        .export-btn:hover {
+            background: var(--border-color);
+        }
+        
         /* Responsive Design */
         @media (max-width: 767px) {
             .header-content {
@@ -529,13 +710,49 @@
         <!-- Info Banner -->
         <div class="info-banner">
             <h2>🚀 Welcome to Savrli AI Interactive Demo</h2>
-            <p>Test our AI capabilities in real-time. Enter a prompt, adjust settings, and see instant results from our backend API.</p>
+            <p>Test our AI capabilities in real-time with an enhanced dashboard featuring live stats, interactive charts, and quick actions.</p>
             <ul class="feature-list">
                 <li>Multiple AI Models</li>
                 <li>Conversation History</li>
                 <li>Custom Parameters</li>
                 <li>Real-time Streaming</li>
+                <li>Usage Analytics</li>
+                <li>Export Conversations</li>
+                <li>Quick Action Buttons</li>
+                <li>Keyboard Shortcuts (⌘K, ⌘E, ⌘⇧C)</li>
             </ul>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Messages</div>
+                <div class="stat-value">
+                    <span class="stat-icon">💬</span>
+                    <span id="totalMessages">0</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Session</div>
+                <div class="stat-value">
+                    <span class="stat-icon">⏱️</span>
+                    <span id="sessionDuration">0m</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Response</div>
+                <div class="stat-value">
+                    <span class="stat-icon">⚡</span>
+                    <span id="avgResponse">0s</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Messages Today</div>
+                <div class="stat-value">
+                    <span class="stat-icon">📊</span>
+                    <span id="messagesThisSession">0</span>
+                </div>
+            </div>
         </div>
 
         <!-- Playground Grid -->
@@ -599,20 +816,31 @@
                 <!-- Prompt Input Section -->
                 <div class="prompt-section">
                     <label for="promptInput">Your Prompt</label>
+                    
+                    <!-- Quick Actions -->
+                    <div class="quick-actions" role="group" aria-label="Quick prompt suggestions">
+                        <button class="quick-action-btn" onclick="setQuickPrompt('Explain quantum computing in simple terms')" aria-label="Quick prompt about quantum computing">🔬 Quantum Computing</button>
+                        <button class="quick-action-btn" onclick="setQuickPrompt('Write a Python function to sort a list')" aria-label="Quick prompt for code example">💻 Code Example</button>
+                        <button class="quick-action-btn" onclick="setQuickPrompt('Give me 3 tips for productivity')" aria-label="Quick prompt for productivity tips">✨ Productivity Tips</button>
+                        <button class="quick-action-btn" onclick="setQuickPrompt('Summarize the latest AI trends')" aria-label="Quick prompt about AI trends">📈 AI Trends</button>
+                    </div>
+                    
                     <textarea id="promptInput" 
                               placeholder="Ask anything... Try: 'Explain quantum computing in simple terms' or 'Write a Python function to sort a list'"
-                              maxlength="2000"></textarea>
-                    <div class="char-count">
-                        <span id="charCount">0</span> / 2000 characters
+                              maxlength="2000"
+                              aria-label="Enter your message to the AI"
+                              aria-describedby="charCount"></textarea>
+                    <div class="char-count" id="charCount" role="status" aria-live="polite">
+                        <span id="charCountValue">0</span> / 2000 characters
                     </div>
                 </div>
 
                 <!-- Action Buttons -->
                 <div class="button-group">
-                    <button id="submitBtn" class="btn-primary">
+                    <button id="submitBtn" class="btn-primary" aria-label="Send message to AI">
                         <span id="btnText">Send Message</span>
                     </button>
-                    <button id="clearBtn" class="btn-secondary">Clear History</button>
+                    <button id="clearBtn" class="btn-secondary" aria-label="Clear conversation history">Clear History</button>
                 </div>
 
                 <!-- Status -->
@@ -624,13 +852,33 @@
 
             <!-- Right Panel: Output -->
             <div class="card">
-                <h3 class="card-title">Response</h3>
-                <div id="outputPanel" class="output-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                    <h3 class="card-title" style="margin-bottom: 0;">Response</h3>
+                    <button class="export-btn" onclick="exportConversation()" aria-label="Export conversation to file">📥 Export</button>
+                </div>
+                
+                <!-- Typing Indicator -->
+                <div id="typingIndicator" class="typing-indicator" role="status" aria-live="polite" aria-label="AI is typing">
+                    <span>AI is typing</span>
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+                
+                <div id="outputPanel" class="output-panel" role="log" aria-live="polite" aria-label="Conversation messages">
                     <div class="empty-state">
                         <div class="empty-state-icon">💬</div>
                         <p>Your AI responses will appear here</p>
                         <p style="font-size: 0.875rem; margin-top: 0.5rem;">Send a message to get started!</p>
                     </div>
+                </div>
+                
+                <!-- Usage Chart -->
+                <div class="chart-container" role="img" aria-label="Message activity chart">
+                    <div class="chart-title">Message Activity</div>
+                    <canvas id="messageChart" aria-label="Bar chart showing message activity over time"></canvas>
                 </div>
             </div>
         </div>
@@ -664,7 +912,7 @@
         const submitBtn = document.getElementById('submitBtn');
         const clearBtn = document.getElementById('clearBtn');
         const outputPanel = document.getElementById('outputPanel');
-        const charCount = document.getElementById('charCount');
+        const charCount = document.getElementById('charCountValue');
         const modelSelect = document.getElementById('modelSelect');
         const temperature = document.getElementById('temperature');
         const maxTokens = document.getElementById('maxTokens');
@@ -675,6 +923,15 @@
         // State
         let isLoading = false;
         let conversationHistory = [];
+        let messageCount = 0;
+        let sessionStartTime = Date.now();
+        let responseTimes = [];
+        let messageChartData = {
+            labels: [],
+            user: [],
+            assistant: []
+        };
+        let chartInstance = null;
 
         /**
          * Initialize the playground
@@ -692,9 +949,40 @@
                     sendMessage();
                 }
             });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Ctrl/Cmd + K to focus on prompt
+                if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                    e.preventDefault();
+                    promptInput.focus();
+                }
+                
+                // Ctrl/Cmd + E to export
+                if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+                    e.preventDefault();
+                    exportConversation();
+                }
+                
+                // Ctrl/Cmd + Shift + C to clear
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+                    e.preventDefault();
+                    clearConversation();
+                }
+            });
 
             // Load conversation history from localStorage if available
             loadConversationFromStorage();
+            
+            // Initialize stats
+            updateStats();
+            updateSessionDuration();
+            
+            // Update session duration every second
+            setInterval(updateSessionDuration, 1000);
+            
+            // Initialize chart
+            initChart();
         }
 
         /**
@@ -753,6 +1041,8 @@
 
             // Update UI state
             setLoading(true);
+            showTypingIndicator();
+            const requestStartTime = Date.now();
             addMessage('user', prompt);
 
             try {
@@ -777,11 +1067,16 @@
 
                 const data = await response.json();
                 
+                // Calculate response time
+                const responseTime = (Date.now() - requestStartTime) / 1000;
+                responseTimes.push(responseTime);
+                
                 // Display AI response
                 if (data.response) {
                     addMessage('assistant', data.response);
                     promptInput.value = ''; // Clear input
                     updateCharCount();
+                    updateStats();
                 } else {
                     throw new Error('No response received from AI');
                 }
@@ -790,6 +1085,7 @@
                 handleError(error);
             } finally {
                 setLoading(false);
+                hideTypingIndicator();
             }
         }
 
@@ -808,6 +1104,7 @@
             messageEl.className = `message message-${role}`;
             
             const time = new Date().toLocaleTimeString();
+            const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             
             messageEl.innerHTML = `
                 <div class="message-header">
@@ -815,7 +1112,13 @@
                     <span class="message-time">${time}</span>
                 </div>
                 <div class="message-content">${escapeHtml(content)}</div>
+                <div class="message-actions">
+                    <button class="action-btn" onclick="copyMessage('${messageId}')">📋 Copy</button>
+                    ${role === 'assistant' ? '<button class="action-btn" onclick="regenerateResponse()">🔄 Regenerate</button>' : ''}
+                </div>
             `;
+            
+            messageEl.id = messageId;
 
             outputPanel.appendChild(messageEl);
             
@@ -825,6 +1128,10 @@
             // Save to history
             conversationHistory.push({ role, content, time });
             saveConversationToStorage();
+            
+            // Update message count and chart
+            messageCount++;
+            updateChartData(role);
         }
 
         /**
@@ -903,7 +1210,22 @@
 
             // Clear state
             conversationHistory = [];
+            messageCount = 0;
+            responseTimes = [];
+            sessionStartTime = Date.now();
+            messageChartData = {
+                labels: [],
+                user: [],
+                assistant: []
+            };
+            
             localStorage.removeItem('savrli_playground_history');
+            
+            // Update stats and chart
+            updateStats();
+            if (chartInstance) {
+                chartInstance.render();
+            }
 
             // Clear backend session if session ID is provided
             const sessionIdValue = sessionId.value.trim();
@@ -955,6 +1277,219 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+        
+        /**
+         * Update dashboard statistics
+         */
+        function updateStats() {
+            document.getElementById('totalMessages').textContent = messageCount;
+            document.getElementById('messagesThisSession').textContent = messageCount;
+            
+            // Calculate average response time
+            if (responseTimes.length > 0) {
+                const avg = responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length;
+                document.getElementById('avgResponse').textContent = avg.toFixed(1) + 's';
+            }
+        }
+        
+        /**
+         * Update session duration
+         */
+        function updateSessionDuration() {
+            const duration = Math.floor((Date.now() - sessionStartTime) / 1000 / 60);
+            document.getElementById('sessionDuration').textContent = duration + 'm';
+        }
+        
+        /**
+         * Show typing indicator
+         */
+        function showTypingIndicator() {
+            document.getElementById('typingIndicator').classList.add('active');
+        }
+        
+        /**
+         * Hide typing indicator
+         */
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').classList.remove('active');
+        }
+        
+        /**
+         * Set quick prompt
+         */
+        function setQuickPrompt(prompt) {
+            promptInput.value = prompt;
+            updateCharCount();
+            promptInput.focus();
+        }
+        
+        /**
+         * Copy message to clipboard
+         */
+        function copyMessage(messageId) {
+            const messageEl = document.getElementById(messageId);
+            const contentEl = messageEl.querySelector('.message-content');
+            const text = contentEl.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Show temporary feedback
+                const btn = messageEl.querySelector('.action-btn');
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+        
+        /**
+         * Regenerate last response
+         */
+        function regenerateResponse() {
+            // Find the last user message
+            const userMessages = conversationHistory.filter(msg => msg.role === 'user');
+            if (userMessages.length > 0) {
+                const lastUserMessage = userMessages[userMessages.length - 1];
+                promptInput.value = lastUserMessage.content;
+                updateCharCount();
+                sendMessage();
+            }
+        }
+        
+        /**
+         * Export conversation
+         */
+        function exportConversation() {
+            if (conversationHistory.length === 0) {
+                alert('No conversation to export');
+                return;
+            }
+            
+            let text = '# Savrli AI Conversation Export\n';
+            text += `Session ID: ${sessionId.value || 'N/A'}\n`;
+            text += `Date: ${new Date().toLocaleString()}\n`;
+            text += `Total Messages: ${messageCount}\n\n`;
+            text += '---\n\n';
+            
+            conversationHistory.forEach(msg => {
+                text += `**${msg.role === 'user' ? 'You' : 'AI Assistant'}** (${msg.time}):\n`;
+                text += `${msg.content}\n\n`;
+            });
+            
+            // Create download
+            const blob = new Blob([text], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `savrli-conversation-${Date.now()}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        /**
+         * Initialize chart
+         */
+        function initChart() {
+            const canvas = document.getElementById('messageChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Simple bar chart implementation
+            chartInstance = {
+                canvas: canvas,
+                ctx: ctx,
+                data: messageChartData,
+                render: function() {
+                    const width = canvas.width;
+                    const height = canvas.height;
+                    
+                    // Clear canvas
+                    ctx.clearRect(0, 0, width, height);
+                    
+                    if (this.data.labels.length === 0) {
+                        // Show empty state
+                        ctx.fillStyle = '#94a3b8';
+                        ctx.font = '12px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('No data yet. Start chatting to see activity!', width / 2, height / 2);
+                        return;
+                    }
+                    
+                    // Draw bars
+                    const barWidth = Math.max(20, (width - 40) / this.data.labels.length);
+                    const maxValue = Math.max(...this.data.user, ...this.data.assistant, 1);
+                    
+                    this.data.labels.forEach((label, i) => {
+                        const x = 20 + i * barWidth;
+                        const userHeight = (this.data.user[i] / maxValue) * (height - 40);
+                        const assistantHeight = (this.data.assistant[i] / maxValue) * (height - 40);
+                        
+                        // User bar (blue)
+                        ctx.fillStyle = '#6366f1';
+                        ctx.fillRect(x, height - 20 - userHeight, barWidth / 2 - 2, userHeight);
+                        
+                        // Assistant bar (purple)
+                        ctx.fillStyle = '#8b5cf6';
+                        ctx.fillRect(x + barWidth / 2, height - 20 - assistantHeight, barWidth / 2 - 2, assistantHeight);
+                    });
+                    
+                    // Draw legend
+                    ctx.fillStyle = '#6366f1';
+                    ctx.fillRect(width - 100, 10, 10, 10);
+                    ctx.fillStyle = '#f1f5f9';
+                    ctx.font = '10px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('You', width - 85, 18);
+                    
+                    ctx.fillStyle = '#8b5cf6';
+                    ctx.fillRect(width - 100, 25, 10, 10);
+                    ctx.fillStyle = '#f1f5f9';
+                    ctx.fillText('AI', width - 85, 33);
+                }
+            };
+            
+            // Set canvas size
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 150;
+            
+            chartInstance.render();
+        }
+        
+        /**
+         * Update chart data
+         */
+        function updateChartData(role) {
+            const currentTime = new Date();
+            const timeLabel = currentTime.getHours() + ':' + String(currentTime.getMinutes()).padStart(2, '0');
+            
+            // Check if we need to add a new time slot
+            if (messageChartData.labels.length === 0 || messageChartData.labels[messageChartData.labels.length - 1] !== timeLabel) {
+                messageChartData.labels.push(timeLabel);
+                messageChartData.user.push(0);
+                messageChartData.assistant.push(0);
+                
+                // Keep only last 10 time slots
+                if (messageChartData.labels.length > 10) {
+                    messageChartData.labels.shift();
+                    messageChartData.user.shift();
+                    messageChartData.assistant.shift();
+                }
+            }
+            
+            // Update count for current time slot
+            const index = messageChartData.labels.length - 1;
+            if (role === 'user') {
+                messageChartData.user[index]++;
+            } else {
+                messageChartData.assistant[index]++;
+            }
+            
+            // Re-render chart
+            if (chartInstance) {
+                chartInstance.render();
+            }
         }
 
         // Initialize on page load
