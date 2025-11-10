@@ -203,6 +203,17 @@ class TestRootEndpoint:
         assert "message" in response.json()
 
 
+class TestHelloEndpoint:
+    """Test hello endpoint"""
+    
+    def test_hello(self):
+        """Test that hello endpoint works"""
+        response = client.get("/hello")
+        assert response.status_code == 200
+        assert "message" in response.json()
+        assert response.json()["message"] == "Hello from Savrli AI!"
+
+
 class TestConversationHistory:
     """Test conversation history endpoints"""
     
