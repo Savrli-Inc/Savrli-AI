@@ -107,6 +107,39 @@ The API supports both stateless (one-off) and stateful (session-based) conversat
 ✅ **Text Summarization** - AI-powered text summarization with customizable length  
 ✅ **Sentiment Analysis** - Analyze emotional tone and sentiment of text  
 ✅ **Email Drafting** - Generate professional emails with customizable tone and purpose  
+✅ **Platform Integrations** - Connect with Slack, Discord, Notion, and Google Docs  
+✅ **Plugin Architecture** - Extensible system for third-party integrations  
+
+---
+
+## 🔌 Platform Integrations
+
+Savrli AI now supports integration with popular productivity platforms through a flexible plugin architecture.
+
+### **Supported Platforms**
+
+- **Slack** - Send messages, process events, handle slash commands
+- **Discord** - Send messages, process interactions, manage webhooks
+- **Notion** - Create/update pages, manage databases
+- **Google Docs** - Create/update documents, format text
+
+### **Quick Integration Example**
+
+```bash
+# Send AI-generated message to Slack
+curl -X POST https://your-api-url/integrations/slack/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "#general",
+    "message": "Hello from Savrli AI!"
+  }'
+```
+
+### **Integration Documentation**
+
+- 📚 [Integration API Documentation](docs/INTEGRATION_API.md)
+- 💡 [Plugin Examples](docs/PLUGIN_EXAMPLES.md)
+- 🛠️ [Third-Party Extension Guide](docs/INTEGRATION_API.md#third-party-extension-guide)
 
 ---
 
