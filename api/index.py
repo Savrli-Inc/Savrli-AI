@@ -37,6 +37,9 @@ from tools.workflow_automation import WorkflowAutomation
 from resource_manager import (
     ConversationExporter, ConversationImporter, SessionManager
 )
+from api.resource_tools import (
+    TagManager, MetadataManager, ImportExportTriggerManager
+)
 
 # ----------------------------------------------------------------------
 # Logging
@@ -91,6 +94,11 @@ email_drafter = EmailDrafter()
 workflow_automation = WorkflowAutomation()
 
 session_manager = SessionManager(conversation_history)
+
+# Resource Tools (see issue #36 for full implementation)
+tag_manager = TagManager()
+metadata_manager = MetadataManager()
+import_export_manager = ImportExportTriggerManager()
 
 # --- Slack ---
 slack_config = {
@@ -260,6 +268,30 @@ class ImportRequest(BaseModel):
 
 class BulkDeleteRequest(BaseModel):
     session_ids: List[str]
+
+# Resource Tools (issue #36)
+class TagRequest(BaseModel):
+    session_id: str
+    tag: str
+    metadata: Optional[Dict[str, Any]] = None
+
+class MetadataRequest(BaseModel):
+    session_id: str
+    metadata: Dict[str, Any]
+
+class MetadataSearchRequest(BaseModel):
+    filters: Dict[str, Any]
+
+class ExportScheduleRequest(BaseModel):
+    session_id: str
+    format: str
+    destination: str
+    schedule: Optional[str] = None
+
+class ImportTriggerRequest(BaseModel):
+    source: str
+    format: str
+    target_session_id: Optional[str] = None
 
 # ----------------------------------------------------------------------
 # Core Chat Endpoint
@@ -525,5 +557,268 @@ async def root():
 async def playground():
     path = Path(__file__).parent.parent / "pages" / "playground.html"
     return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Playground not found"
+
+# ----------------------------------------------------------------------
+# Resource Tools API (issue #36)
+# ----------------------------------------------------------------------
+# Tagging endpoints
+@app.post("/api/resource-tools/tags")
+async def add_tag(request: TagRequest):
+    """
+    Add a tag to a session.
+    
+    TODO (issue #36): Integrate with persistent storage
+    """
+    try:
+        result = tag_manager.add_tag(
+            request.session_id,
+            request.tag,
+            request.metadata
+        )
+        if result:
+            return {
+                "success": True,
+                "session_id": request.session_id,
+                "tag": request.tag,
+                "message": "Tag added successfully"
+            }
+        else:
+            return {
+                "success": False,
+                "session_id": request.session_id,
+                "tag": request.tag,
+                "message": "Tag already exists"
+            }
+    except Exception as e:
+        logger.exception(f"Error adding tag: {e}")
+        raise HTTPException(status_code=500, detail="Failed to add tag")
+
+@app.delete("/api/resource-tools/tags")
+async def remove_tag(request: TagRequest):
+    """
+    Remove a tag from a session.
+    
+    TODO (issue #36): Integrate with persistent storage
+    """
+    try:
+        result = tag_manager.remove_tag(request.session_id, request.tag)
+        if result:
+            return {
+                "success": True,
+                "session_id": request.session_id,
+                "tag": request.tag,
+                "message": "Tag removed successfully"
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Tag not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error removing tag: {e}")
+        raise HTTPException(status_code=500, detail="Failed to remove tag")
+
+@app.get("/api/resource-tools/tags/{session_id}")
+async def get_tags(session_id: str):
+    """
+    Get all tags for a session.
+    
+    TODO (issue #36): Query from persistent storage
+    """
+    try:
+        tags = tag_manager.get_tags(session_id)
+        return {
+            "session_id": session_id,
+            "tags": tags,
+            "count": len(tags)
+        }
+    except Exception as e:
+        logger.exception(f"Error getting tags: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get tags")
+
+@app.get("/api/resource-tools/tags/search")
+async def find_sessions_by_tag(tag: str):
+    """
+    Find all sessions with a specific tag.
+    
+    TODO (issue #36): Implement efficient indexed search
+    """
+    try:
+        sessions = tag_manager.find_sessions_by_tag(tag)
+        return {
+            "tag": tag,
+            "sessions": sessions,
+            "count": len(sessions)
+        }
+    except Exception as e:
+        logger.exception(f"Error searching by tag: {e}")
+        raise HTTPException(status_code=500, detail="Failed to search by tag")
+
+# Metadata endpoints
+@app.post("/api/resource-tools/metadata")
+async def set_metadata(request: MetadataRequest):
+    """
+    Set metadata for a session.
+    
+    TODO (issue #36): Validate against schema and persist to storage
+    """
+    try:
+        metadata_manager.set_metadata(request.session_id, request.metadata)
+        return {
+            "success": True,
+            "session_id": request.session_id,
+            "message": "Metadata updated successfully"
+        }
+    except Exception as e:
+        logger.exception(f"Error setting metadata: {e}")
+        raise HTTPException(status_code=500, detail="Failed to set metadata")
+
+@app.get("/api/resource-tools/metadata/{session_id}")
+async def get_metadata(session_id: str):
+    """
+    Get metadata for a session.
+    
+    TODO (issue #36): Query from persistent storage
+    """
+    try:
+        metadata = metadata_manager.get_metadata(session_id)
+        return {
+            "session_id": session_id,
+            "metadata": metadata
+        }
+    except Exception as e:
+        logger.exception(f"Error getting metadata: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get metadata")
+
+@app.delete("/api/resource-tools/metadata/{session_id}")
+async def delete_metadata(session_id: str, keys: Optional[str] = None):
+    """
+    Delete metadata for a session.
+    
+    TODO (issue #36): Implement in persistent storage
+    """
+    try:
+        key_list = keys.split(",") if keys else None
+        result = metadata_manager.delete_metadata(session_id, key_list)
+        if result:
+            return {
+                "success": True,
+                "session_id": session_id,
+                "message": "Metadata deleted successfully"
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Session not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error deleting metadata: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete metadata")
+
+@app.post("/api/resource-tools/metadata/search")
+async def search_by_metadata(request: MetadataSearchRequest):
+    """
+    Search sessions by metadata filters.
+    
+    TODO (issue #36): Implement efficient querying with indexes
+    """
+    try:
+        sessions = metadata_manager.search_by_metadata(request.filters)
+        return {
+            "filters": request.filters,
+            "sessions": sessions,
+            "count": len(sessions)
+        }
+    except Exception as e:
+        logger.exception(f"Error searching by metadata: {e}")
+        raise HTTPException(status_code=500, detail="Failed to search by metadata")
+
+# Import/Export trigger endpoints
+@app.post("/api/resource-tools/export/schedule")
+async def schedule_export(request: ExportScheduleRequest):
+    """
+    Schedule an export operation.
+    
+    TODO (issue #36): Implement with background job queue
+    """
+    try:
+        job_id = import_export_manager.schedule_export(
+            request.session_id,
+            request.format,
+            request.destination,
+            request.schedule
+        )
+        return {
+            "success": True,
+            "job_id": job_id,
+            "status": "pending",
+            "message": "Export scheduled successfully"
+        }
+    except Exception as e:
+        logger.exception(f"Error scheduling export: {e}")
+        raise HTTPException(status_code=500, detail="Failed to schedule export")
+
+@app.post("/api/resource-tools/import/trigger")
+async def trigger_import(request: ImportTriggerRequest):
+    """
+    Trigger an import operation.
+    
+    TODO (issue #36): Implement asynchronous import processing
+    """
+    try:
+        job_id = import_export_manager.trigger_import(
+            request.source,
+            request.format,
+            request.target_session_id
+        )
+        return {
+            "success": True,
+            "job_id": job_id,
+            "status": "pending",
+            "message": "Import triggered successfully"
+        }
+    except Exception as e:
+        logger.exception(f"Error triggering import: {e}")
+        raise HTTPException(status_code=500, detail="Failed to trigger import")
+
+@app.get("/api/resource-tools/jobs/{job_id}")
+async def get_job_status(job_id: str):
+    """
+    Get status of an import/export job.
+    
+    TODO (issue #36): Query from job queue backend
+    """
+    try:
+        status = import_export_manager.get_job_status(job_id)
+        if status:
+            return status
+        else:
+            raise HTTPException(status_code=404, detail="Job not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error getting job status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get job status")
+
+@app.delete("/api/resource-tools/jobs/{job_id}")
+async def cancel_job(job_id: str):
+    """
+    Cancel a pending import/export job.
+    
+    TODO (issue #36): Implement job cancellation in queue
+    """
+    try:
+        result = import_export_manager.cancel_job(job_id)
+        if result:
+            return {
+                "success": True,
+                "job_id": job_id,
+                "message": "Job cancelled successfully"
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Job not found or already completed")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception(f"Error cancelling job: {e}")
+        raise HTTPException(status_code=500, detail="Failed to cancel job")
 
 # ... [rest of tools, integrations, export/import, etc. – unchanged from main]
