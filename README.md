@@ -1,3 +1,9 @@
+
+---
+
+## `api/index.py` (Final Version)
+
+```python
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import StreamingResponse, HTMLResponse
 from pydantic import BaseModel
@@ -281,17 +287,14 @@ async def get_complete_response(model, messages, max_tokens, temperature, top_p,
             "presence_penalty": presence_penalty,
         }.items() if v is not None}
         return client.chat.completions.create(**kwargs)
-
     response = await asyncio.to_thread(call)
     content = response.choices[0].message.content.strip()
-
     if session_id:
         conversation_history[session_id].append({
             "role": "assistant", "content": content,
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
         trim_conversation_history(session_id)
-
     return {"response": content, "session_id": session_id}
 
 async def stream_openai_response(model, messages, max_tokens, temperature, top_p,
@@ -306,14 +309,12 @@ async def stream_openai_response(model, messages, max_tokens, temperature, top_p
                 "presence_penalty": presence_penalty
             }.items() if v is not None}
             return client.chat.completions.create(**kwargs)
-
         stream_obj = await asyncio.to_thread(stream)
         for chunk in stream_obj:
             if chunk.choices and (delta := chunk.choices[0].delta.content):
                 full += delta
                 yield f"data: {json.dumps({'content': delta})}\n\n"
         yield f"data: {json.dumps({'done': True})}\n\n"
-
         if full and session_id:
             conversation_history[session_id].append({
                 "role": "assistant", "content": full,
@@ -371,7 +372,6 @@ async def analyze_image(request: VisionRequest):
         raise HTTPException(status_code=400, detail="Prompt cannot be empty")
     if not request.image_url.strip():
         raise HTTPException(status_code=400, detail="Image URL cannot be empty")
-
     try:
         result = multimodal_processor.process_vision(
             prompt=request.prompt,
@@ -404,7 +404,6 @@ async def generate_image(request: ImageGenerationRequest):
         raise HTTPException(status_code=400, detail="Invalid size")
     if request.quality not in ["standard", "hd"]:
         raise HTTPException(status_code=400, detail="quality must be standard or hd")
-
     try:
         response = client.images.generate(
             model=request.model,
@@ -427,7 +426,6 @@ async def generate_image(request: ImageGenerationRequest):
 
 @app.post("/ai/audio/transcribe")
 async def transcribe_audio(request: AudioRequest):
-    # Placeholder — file upload coming soon
     raise HTTPException(status_code=501, detail="Audio transcription not implemented yet")
 
 @app.post("/ai/fine-tuning/configure")
