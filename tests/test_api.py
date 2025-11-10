@@ -497,5 +497,22 @@ class TestPlaygroundEndpoint:
         
         # Check for inline documentation
         assert "CONTRIBUTOR" in content or "contributor" in content
+    
+    def test_playground_includes_syntax_highlighting(self):
+        """Test that playground includes Highlight.js and Marked.js libraries"""
+        response = client.get("/playground")
+        content = response.text
+        
+        # Check for Marked.js CDN link
+        assert "marked" in content.lower()
+        assert "cdn.jsdelivr.net" in content or "marked" in content
+        
+        # Check for Highlight.js CDN link
+        assert "highlight.js" in content.lower() or "hljs" in content
+        assert "cdnjs.cloudflare.com" in content or "highlight" in content
+        
+        # Check for renderOutput function that processes markdown
+        assert "renderOutput" in content
+        assert "marked.parse" in content or "marked.setOptions" in content
 
 
