@@ -617,24 +617,6 @@ async def remove_tag(request: TagRequest):
         logger.exception(f"Error removing tag: {e}")
         raise HTTPException(status_code=500, detail="Failed to remove tag")
 
-@app.get("/api/resource-tools/tags/{session_id}")
-async def get_tags(session_id: str):
-    """
-    Get all tags for a session.
-    
-    TODO (issue #36): Query from persistent storage
-    """
-    try:
-        tags = tag_manager.get_tags(session_id)
-        return {
-            "session_id": session_id,
-            "tags": tags,
-            "count": len(tags)
-        }
-    except Exception as e:
-        logger.exception(f"Error getting tags: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get tags")
-
 @app.get("/api/resource-tools/tags/search")
 async def find_sessions_by_tag(tag: str):
     """
@@ -652,6 +634,24 @@ async def find_sessions_by_tag(tag: str):
     except Exception as e:
         logger.exception(f"Error searching by tag: {e}")
         raise HTTPException(status_code=500, detail="Failed to search by tag")
+
+@app.get("/api/resource-tools/tags/{session_id}")
+async def get_tags(session_id: str):
+    """
+    Get all tags for a session.
+    
+    TODO (issue #36): Query from persistent storage
+    """
+    try:
+        tags = tag_manager.get_tags(session_id)
+        return {
+            "session_id": session_id,
+            "tags": tags,
+            "count": len(tags)
+        }
+    except Exception as e:
+        logger.exception(f"Error getting tags: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get tags")
 
 # Metadata endpoints
 @app.post("/api/resource-tools/metadata")
