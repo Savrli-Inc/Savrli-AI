@@ -636,13 +636,16 @@ class TestAudioTranscriptionEndpoint:
         assert response.status_code == 400
         assert "audio url" in response.json()["detail"].lower()
     
-    def test_audio_not_implemented(self):
-        """Test that audio transcription returns not implemented"""
+    def test_audio_transcription_configured(self):
+        """Test that audio transcription endpoint is configured"""
         response = client.post("/ai/audio/transcribe", json={
             "audio_url": "https://example.com/audio.mp3"
         })
-        assert response.status_code == 501
-        detail = response.json()["detail"].lower()
-        assert "file upload" in detail or "not implemented" in detail
+        # Audio endpoint is configured but returns configuration info
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] == True
+        assert "result" in data
+        assert data["model"] == "whisper-1"
 
 
