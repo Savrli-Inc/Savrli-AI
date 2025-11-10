@@ -1294,3 +1294,37 @@ async def list_ai_tools():
         ],
         "count": 4
     }
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard():
+    """
+    Serve the interactive AI dashboard page.
+    
+    This endpoint serves a comprehensive dashboard that provides:
+    - Real-time statistics and metrics
+    - Available models overview
+    - AI tools status
+    - Integration status
+    - Performance monitoring
+    - Theme toggle (light/dark mode)
+    - Interactive charts and visualizations
+    
+    The dashboard is useful for:
+    - Monitoring system health and performance
+    - Viewing usage statistics
+    - Managing models and integrations
+    - Tracking AI tool usage
+    - Real-time system overview
+    """
+    dashboard_path = Path(__file__).parent.parent / "pages" / "dashboard.html"
+    
+    if not dashboard_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Dashboard page not found"
+        )
+    
+    with open(dashboard_path, "r", encoding="utf-8") as f:
+        html_content = f.read()
+    
+    return HTMLResponse(content=html_content)
