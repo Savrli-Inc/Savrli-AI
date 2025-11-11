@@ -3,284 +3,305 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Savrli AI - Demo Page</title>
+    <title>Savrli AI Demo - API Test Harness</title>
     <style>
-        /* Minimal styling for demo page - TODO: Enhance styling per issue #36 */
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-dark: #0f172a;
+            --bg-surface: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border: #475569;
+            --success: #10b981;
+            --error: #ef4444;
+            --radius: 0.5rem;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f5f5f5;
-            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
             line-height: 1.6;
-            padding: 20px;
+            padding: 2rem 1rem;
         }
-        
+
         .container {
             max-width: 900px;
             margin: 0 auto;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 30px;
+            background: var(--bg-surface);
+            border-radius: var(--radius);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
         }
-        
+
         h1 {
-            color: #6366f1;
-            margin-bottom: 10px;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
         }
-        
+
         .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
         }
-        
+
         .note {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            border-radius: 4px;
-            padding: 15px;
-            margin-bottom: 20px;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
         }
-        
+
         .note strong {
-            color: #856404;
+            color: #fbbf24;
         }
-        
+
         .section {
-            margin-bottom: 30px;
+            margin-bottom: 2rem;
         }
-        
+
         .section h2 {
-            font-size: 18px;
-            margin-bottom: 15px;
-            color: #444;
-            border-bottom: 2px solid #6366f1;
-            padding-bottom: 5px;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 0.5rem;
         }
-        
+
         .sample-prompts {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
         }
-        
+
         .sample-prompt {
-            background: #e3f2fd;
-            border: 1px solid #2196f3;
-            border-radius: 4px;
-            padding: 8px 12px;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid var(--primary);
+            border-radius: var(--radius);
+            padding: 0.5rem 1rem;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 0.875rem;
             transition: all 0.2s;
+            color: var(--text-primary);
         }
-        
+
         .sample-prompt:hover {
-            background: #2196f3;
+            background: var(--primary);
             color: white;
         }
-        
+
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 0.5rem;
             font-weight: 500;
-            color: #555;
+            color: var(--text-secondary);
         }
-        
+
         textarea {
             width: 100%;
-            min-height: 100px;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
+            min-height: 120px;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg-dark);
+            color: var(--text-primary);
             font-family: inherit;
-            font-size: 14px;
+            font-size: 1rem;
             resize: vertical;
             transition: border-color 0.2s;
         }
-        
+
         textarea:focus {
             outline: none;
-            border-color: #6366f1;
+            border-color: var(--primary);
         }
-        
+
         .button-group {
             display: flex;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 0.75rem;
+            margin-top: 1rem;
         }
-        
+
         button {
-            padding: 12px 24px;
+            padding: 0.75rem 1.5rem;
             border: none;
-            border-radius: 4px;
-            font-size: 14px;
+            border-radius: var(--radius);
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
         }
-        
+
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
-        
+
         #sendButton {
-            background: #6366f1;
+            background: var(--primary);
             color: white;
             flex: 1;
         }
-        
+
         #sendButton:hover:not(:disabled) {
-            background: #4f46e5;
+            background: var(--primary-hover);
         }
-        
+
         #clearButton {
-            background: #e5e7eb;
-            color: #333;
+            background: var(--border);
+            color: var(--text-primary);
         }
-        
+
         #clearButton:hover {
-            background: #d1d5db;
+            background: #64748b;
         }
-        
+
         #output {
             min-height: 200px;
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            padding: 15px;
-            background: #fafafa;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            background: var(--bg-dark);
+            margin-top: 1rem;
         }
-        
+
         .placeholder {
-            color: #999;
+            color: var(--text-secondary);
             font-style: italic;
             text-align: center;
-            padding: 40px 0;
+            padding: 3rem 0;
         }
-        
+
         .message {
-            margin-bottom: 15px;
-            padding: 12px;
-            border-radius: 4px;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: var(--radius);
             animation: slideIn 0.3s ease-out;
         }
-        
+
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .message-user {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
+            background: rgba(59, 130, 246, 0.2);
+            border-left: 4px solid #3b82f6;
         }
-        
+
         .message-assistant {
-            background: #f3e5f5;
-            border-left: 4px solid #9c27b0;
+            background: rgba(147, 51, 234, 0.2);
+            border-left: 4px solid #9333ea;
         }
-        
+
         .message-error {
-            background: #ffebee;
-            border-left: 4px solid #f44336;
+            background: rgba(239, 68, 68, 0.2);
+            border-left: 4px solid var(--error);
         }
-        
+
         .message-info {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
+            background: rgba(251, 191, 36, 0.2);
+            border-left: 4px solid #fbbf24;
         }
-        
+
         .message-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 12px;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
         }
-        
+
         .message-type {
             font-weight: 600;
             text-transform: uppercase;
         }
-        
+
         .message-time {
-            color: #666;
+            color: var(--text-secondary);
         }
-        
+
         .message-content {
             word-wrap: break-word;
             white-space: pre-wrap;
+            font-size: 0.95rem;
         }
-        
+
         .upload-section {
-            opacity: 0.5;
+            opacity: 0.6;
             pointer-events: none;
         }
-        
+
         .upload-section p {
             font-style: italic;
-            color: #999;
+            color: var(--text-secondary);
         }
-        
+
         footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
             text-align: center;
-            color: #666;
-            font-size: 12px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Savrli AI Demo Page</h1>
-        <p class="subtitle">Simple test harness for AI endpoints</p>
-        
+        <h1>Savrli AI Demo</h1>
+        <p class="subtitle">Interactive test harness for AI & file upload endpoints</p>
+
         <div class="note">
-            <strong>Note:</strong> This is a minimal demo page for manual testing. 
-            For the full interactive playground experience, visit <a href="/playground">/playground</a>.
+            <strong>Note:</strong> This is a developer-focused test page. For full features, use <a href="/playground">/playground</a>.
             <br><em>TODO: See issue #36 for planned enhancements.</em>
         </div>
-        
+
         <!-- Chat Demo Section -->
         <div class="section">
             <h2>Chat API Test (/ai/chat)</h2>
-            
+
             <div class="sample-prompts">
-                <button class="sample-prompt" data-prompt="What is quantum computing?">🔬 Quantum Computing</button>
-                <button class="sample-prompt" data-prompt="Write a Python function to reverse a string">💻 Python Code</button>
-                <button class="sample-prompt" data-prompt="Explain REST APIs in simple terms">📚 REST APIs</button>
-                <button class="sample-prompt" data-prompt="Give me 3 productivity tips">✨ Productivity</button>
+                <button class="sample-prompt" data-prompt="What is quantum computing?">Quantum Computing</button>
+                <button class="sample-prompt" data-prompt="Write a Python function to reverse a string">Python Code</button>
+                <button class="sample-prompt" data-prompt="Explain REST APIs in simple terms">REST APIs</button>
+                <button class="sample-prompt" data-prompt="Give me 3 productivity tips">Productivity</button>
             </div>
-            
+
             <label for="promptInput">Enter your prompt:</label>
-            <textarea 
-                id="promptInput" 
-                placeholder="Type your question or prompt here... (Shift+Enter for new line, Enter to send)"
+            <textarea
+                id="promptInput"
+                placeholder="Type your question... (Shift+Enter for new line, Enter to send)"
                 aria-label="Prompt input"
             ></textarea>
-            
+
             <div class="button-group">
                 <button id="sendButton" aria-label="Send message">Send</button>
                 <button id="clearButton" aria-label="Clear output">Clear Output</button>
             </div>
         </div>
-        
+
         <!-- Output Section -->
         <div class="section">
             <h2>Response Output</h2>
@@ -288,21 +309,20 @@
                 <p class="placeholder">Messages will appear here...</p>
             </div>
         </div>
-        
-        <!-- File Upload Section (placeholder for future) -->
-        <!-- TODO: Implement when /api/resources/upload is available (issue #36) -->
+
+        <!-- File Upload Section (placeholder) -->
         <div class="section upload-section">
             <h2>File Upload Test (/api/resources/upload)</h2>
-            <p>🚧 Coming soon - see issue #36</p>
-            <p>Placeholder for testing file upload endpoints when implemented.</p>
+            <p>Coming soon – see issue #36</p>
+            <p>Placeholder for testing file upload when implemented.</p>
         </div>
-        
+
         <footer>
-            <p>Savrli AI Demo Page | <a href="/playground">Full Playground</a> | <a href="/">Home</a></p>
-            <p style="margin-top: 5px;">Reference: Issue #36</p>
+            <p>Savrli AI Demo | <a href="/playground">Full Playground</a> | <a href="/">Home</a></p>
+            <p style="margin-top: 0.5rem;">Reference: Issue #36</p>
         </footer>
     </div>
-    
+
     <!-- Load demo.js -->
     <script src="/static/js/demo.js"></script>
 </body>

@@ -1,173 +1,218 @@
 """
-Test suite for demo page endpoints
-
-Basic tests to verify demo endpoints return 200 status codes.
-These are simple smoke tests to ensure the demo page is accessible.
-
-TODO (issue #36): Expand test coverage for:
-- File upload endpoint when /api/resources/upload is implemented
-- Integration testing with demo.js
-- Screenshot testing for UI verification
+Tests for demo page and endpoints.
+This module contains comprehensive tests to verify that:
+- The demo page loads correctly
+- Static files are served
+- Chat and upload endpoints work
+- Integration with frontend is correct
 """
-
 import pytest
-from fastapi.testclient import TestClient
-import os
+import io
 import sys
+import os
+from fastapi.testclient import TestClient
+from unittest.mock import patch, MagicMock
 
-# Add parent directory to path to import the API
+# Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-# Set environment variable before importing the app
+# Set dummy OpenAI key
 os.environ['OPENAI_API_KEY'] = 'test-key-12345'
 
-from api.index import app
+from api.index import app  # noqa: E402
 
 client = TestClient(app)
 
 
 class TestDemoPageEndpoint:
-    """Test the demo page HTML endpoint"""
-    
-    def test_demo_page_exists(self):
-        """Verify /demo returns 200 and HTML content"""
+    """Test the /demo page endpoint"""
+
+    def test_demo_page_returns_200(self):
+        """Test that demo page endpoint returns 200 OK"""
         response = client.get("/demo")
         assert response.status_code == 200
-    
+
     def test_demo_page_returns_html(self):
-        """Verify demo page serves HTML content type"""
+        """Test that demo page returns HTML content"""
         response = client.get("/demo")
         assert response.status_code == 200
-        assert "text/html" in response.headers.get("content-type", "")
-    
-    def test_demo_page_contains_required_elements(self):
-        """Verify demo page contains essential UI elements"""
+        assert response.headers["content-type"] == "text/html; charset=utf-8"
+
+    def test_demo_page_contains_title(self):
+        """Test that demo page contains expected title"""
         response = client.get("/demo")
-        assert response.status_code == 200
         content = response.text
-        
-        # Check for essential elements
         assert "Savrli AI Demo" in content
-        assert "promptInput" in content
-        assert "sendButton" in content
-        assert "output" in content
-        assert "/static/js/demo.js" in content
-        assert "issue #36" in content.lower() or "issue #36" in content
 
-
-class TestDemoStaticAssets:
-    """Test static assets for demo page"""
-    
-    def test_demo_js_accessible(self):
-        """Verify demo.js is accessible via static file serving"""
-        response = client.get("/static/js/demo.js")
-        assert response.status_code == 200
-    
-    def test_demo_js_valid_javascript(self):
-        """Verify demo.js contains expected JavaScript code"""
-        response = client.get("/static/js/demo.js")
-        assert response.status_code == 200
+    def test_demo_page_contains_chat_section(self):
+        """Test that demo page contains chat API demo section"""
+        response = client.get("/demo")
         content = response.text
-        
-        # Check for key functions
-        assert "initDemo" in content
-        assert "sendChatMessage" in content
-        assert "CHAT_ENDPOINT" in content
-        assert "issue #36" in content.lower() or "issue #36" in content
+        assert "Chat API Demo" in content or "Chat" in content
+        assert "chat-output" in content
+
+    def test_demo_page_contains_upload_section(self):
+        """Test that demo page contains upload demo section"""
+        response = client.get("/demo")
+        content = response.text
+        assert "Upload" in content or "File" in content
+        assert "upload-output" in content
+
+    def test_demo_page_includes_demo_js(self):
+        """Test that demo page includes demo.js script"""
+        response = client.get("/demo")
+        content = response.text
+        assert "/static/js/demo.js" in content
 
 
-class TestDemoChatEndpoint:
-    """Test that demo page can interact with /ai/chat endpoint"""
-    
-    def test_chat_endpoint_accessible_for_demo(self):
-        """Verify /ai/chat endpoint is accessible (required for demo)"""
-        # This endpoint already exists, verify it returns 200 with valid request
-        from unittest.mock import patch, MagicMock
-        
-        with patch('api.index.client.chat.completions.create') as mock_create:
-            # Mock OpenAI response
-            mock_response = MagicMock()
-            mock_response.choices = [MagicMock()]
-            mock_response.choices[0].message.content = "Test response for demo"
-            mock_create.return_value = mock_response
-            
-            response = client.post("/ai/chat", json={
-                "prompt": "Test prompt from demo page",
-                "model": "gpt-3.5-turbo",
-                "temperature": 0.7,
-                "max_tokens": 500,
-                "session_id": "demo-session"
-            })
-            
-            assert response.status_code == 200
-            assert "response" in response.json()
-    
-    def test_chat_endpoint_handles_demo_session(self):
-        """Verify demo session is handled correctly"""
-        from unittest.mock import patch, MagicMock
-        
-        with patch('api.index.client.chat.completions.create') as mock_create:
-            mock_response = MagicMock()
-            mock_response.choices = [MagicMock()]
-            mock_response.choices[0].message.content = "Demo session response"
-            mock_create.return_value = mock_response
-            
-            response = client.post("/ai/chat", json={
-                "prompt": "Hello from demo",
-                "session_id": "demo-session"
-            })
-            
+class TestDemoJavaScriptFile:
+    """Test that demo.js is accessible via static files"""
+
+    def test_demo_js_accessible(self):
+        """Test that demo.js file returns 200"""
+        response = client.get("/static/js/demo.js")
+        assert response.status_code == 200
+
+    def test_demo_js_is_javascript(self):
+        """Test that demo.js has correct content type"""
+        response = client.get("/static/js/demo.js")
+        ctype = response.headers["content-type"]
+        assert any(
+            mime in ctype for mime in
+            ["javascript", "application/javascript", "text/javascript", "text/plain"]
+        )
+
+    def test_demo_js_contains_api_calls(self):
+        """Test that demo.js contains expected API integration"""
+        response = client.get("/static/js/demo.js")
+        content = response.text
+        assert "fetch" in content
+        assert "/ai/chat" in content or "/api/resources/upload" in content
+
+
+class TestResourceUploadEndpoint:
+    """Test the /api/resources/upload endpoint"""
+
+    def test_upload_endpoint_exists(self):
+        """Test endpoint returns 422 without file (validation)"""
+        response = client.post("/api/resources/upload")
+        assert response.status_code == 422
+
+    def test_upload_endpoint_accepts_file(self):
+        """Test successful file upload"""
+        test_file = io.BytesIO(b"test content")
+        response = client.post(
+            "/api/resources/upload",
+            files={"file": ("test.txt", test_file, "text/plain")}
+        )
+        assert response.status_code == 200
+
+    def test_upload_endpoint_returns_metadata(self):
+        """Test metadata is returned correctly"""
+        content = b"demo test file"
+        test_file = io.BytesIO(content)
+        response = client.post(
+            "/api/resources/upload",
+            files={"file": ("demo_test.txt", test_file, "text/plain")}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        file_info = data["file_info"]
+        assert file_info["filename"] == "demo_test.txt"
+        assert file_info["content_type"] == "text/plain"
+        assert file_info["size"] == len(content)
+
+    def test_upload_endpoint_handles_different_file_types(self):
+        """Test multiple file types are accepted"""
+        file_types = [
+            ("test.txt", b"text", "text/plain"),
+            ("data.json", b'{"key": "value"}', "application/json"),
+            ("binary.bin", b"\x00\x01", "application/octet-stream"),
+        ]
+        for filename, content, ctype in file_types:
+            test_file = io.BytesIO(content)
+            response = client.post(
+                "/api/resources/upload",
+                files={"file": (filename, test_file, ctype)}
+            )
             assert response.status_code == 200
             data = response.json()
-            assert "session_id" in data
-            assert data["session_id"] == "demo-session"
+            assert data["success"] is True
+            assert data["file_info"]["filename"] == filename
 
 
-class TestDemoResourceUpload:
-    """Test resource upload endpoint for demo page"""
-    
-    def test_upload_endpoint_placeholder(self):
-        """Placeholder test for /api/resources/upload endpoint"""
-        # TODO: Implement when endpoint is created (issue #36)
-        # This endpoint does not exist yet, documented for future implementation
-        pass
-    
-    def test_upload_accepts_files(self):
-        """Verify upload endpoint accepts file uploads"""
-        # TODO: Implement when endpoint is created (issue #36)
-        pass
-    
-    def test_upload_validates_file_types(self):
-        """Verify upload endpoint validates file types"""
-        # TODO: Implement when endpoint is created (issue #36)
-        pass
+class TestDemoPageIntegration:
+    """Integration tests for demo page + JS"""
+
+    def test_demo_page_chat_button_integration(self):
+        """Test chat buttons have data-prompt"""
+        response = client.get("/demo")
+        content = response.text
+        assert "data-prompt" in content
+        assert "chat-demo-btn" in content
+
+    def test_demo_page_form_elements(self):
+        """Test custom chat form exists"""
+        response = client.get("/demo")
+        content = response.text
+        assert "custom-chat-form" in content or "custom-prompt" in content
+        assert "file-input" in content or 'type="file"' in content
+
+    def test_demo_page_output_panels(self):
+        """Test response containers exist"""
+        response = client.get("/demo")
+        content = response.text
+        assert "chat-output" in content
+        assert "upload-output" in content
 
 
-class TestDemoIntegration:
-    """Integration tests for demo page functionality"""
-    
-    def test_demo_end_to_end_chat_flow(self):
-        """Test complete chat flow from demo page perspective"""
-        # TODO: Implement full integration test (issue #36)
-        # This would simulate user interaction with demo page
-        pass
-    
-    def test_demo_handles_api_errors_gracefully(self):
-        """Verify demo page handles API errors appropriately"""
-        # TODO: Implement error handling tests (issue #36)
-        pass
-    
-    def test_demo_session_management(self):
-        """Verify demo page manages sessions correctly"""
-        # TODO: Implement session management tests (issue #36)
-        pass
+class TestDemoEndpointsWithMocks:
+    """Test endpoints with mocked OpenAI"""
+
+    @patch('api.index.client.chat.completions.create')
+    def test_chat_api_works_for_demo(self, mock_create):
+        """Test chat endpoint with mock response"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Mocked AI response"
+        mock_create.return_value = mock_response
+
+        response = client.post("/ai/chat", json={"prompt": "Hello"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["response"] == "Mocked AI response"
+
+    @patch('api.index.client.chat.completions.create')
+    def test_chat_endpoint_with_sample_prompts(self, mock_create):
+        """Test multiple demo prompts"""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Test response"
+        mock_create.return_value = mock_response
+
+        prompts = [
+            "What is the capital of France?",
+            "Explain quantum computing",
+            "Write a haiku about coding",
+        ]
+        for prompt in prompts:
+            response = client.post("/ai/chat", json={"prompt": prompt})
+            assert response.status_code == 200
+            assert "response" in response.json()
 
 
-# Smoke test to verify test file is loadable
-def test_demo_tests_loadable():
-    """Verify this test file can be loaded by pytest"""
-    assert True, "Demo test file loaded successfully"
+class TestDemoDocumentation:
+    """Test demo page includes docs links"""
 
+    def test_demo_page_has_info_boxes(self):
+        """Test informational sections"""
+        response = client.get("/demo")
+        content = response.text
+        assert any(term in content for term in ["Endpoint:", "POST", "info-box"])
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    def test_demo_page_links_to_docs(self):
+        """Test links to documentation"""
+        response = client.get("/demo")
+        content = response.text
+        assert any(link in content.lower() for link in ["docs", "documentation", "github"])

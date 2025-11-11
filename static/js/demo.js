@@ -1,204 +1,215 @@
 /**
- * Savrli AI Demo Page - JavaScript
- * 
- * Simple demo script for testing /api/ai/chat endpoint
- * 
- * TODO: Expand functionality as per issue #36
- * - Add more sample prompts
- * - Add file upload support for /api/resources/upload (when implemented)
- * - Add error handling improvements
- * - Add response formatting options
+ * Savrli AI Demo Page JavaScript
+ * Handles API interactions for chat and resource upload endpoints
+ * Provides a clean, responsive test harness with loading states and raw JSON
  */
 
-// API endpoint configuration
-const API_BASE_URL = '/ai';
-const CHAT_ENDPOINT = `${API_BASE_URL}/chat`;
+// API base URL - defaults to current origin
+const API_BASE = window.location.origin;
+const CHAT_ENDPOINT = `${API_BASE}/ai/chat`;
+const UPLOAD_ENDPOINT = `${API_BASE}/api/resources/upload`;
 
 /**
- * Initialize the demo page
+ * Initialize the demo page when DOM is loaded
  */
-function initDemo() {
+document.addEventListener('DOMContentLoaded', () => {
     console.log('Savrli AI Demo initialized');
-    
-    // Add event listeners
-    const sendButton = document.getElementById('sendButton');
-    const clearButton = document.getElementById('clearButton');
-    const promptInput = document.getElementById('promptInput');
-    
-    if (sendButton) {
-        sendButton.addEventListener('click', sendChatMessage);
-    }
-    
-    if (clearButton) {
-        clearButton.addEventListener('click', clearOutput);
-    }
-    
-    if (promptInput) {
-        // Allow Enter to send (Shift+Enter for new line)
-        promptInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendChatMessage();
-            }
-        });
-    }
-    
-    // Add event listeners for sample prompts
-    const sampleButtons = document.querySelectorAll('.sample-prompt');
-    sampleButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const prompt = button.dataset.prompt;
-            if (promptInput && prompt) {
-                promptInput.value = prompt;
-            }
-        });
+    setupEventListeners();
+});
+
+/**
+ * Setup event listeners for all interactive elements
+ */
+function setupEventListeners() {
+    // Chat API buttons (quick test)
+    document.querySelectorAll('.chat-demo-btn').forEach(btn => {
+        btn.addEventListener('click', handleChatDemo);
     });
+
+    // Custom chat form
+    const customChatForm = document.getElementById('custom-chat-form');
+    if (customChatForm) {
+        customChatForm.addEventListener('submit', handleCustomChat);
+    }
+
+    // Upload API button
+    const uploadBtn = document.getElementById('upload-demo-btn');
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', handleUploadDemo);
+    }
+
+    // File input change (for metadata preview)
+    const fileInput = document.getElementById('file-input') || document.getElementById('file-upload');
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileSelect);
+    }
 }
 
 /**
- * Send a chat message to the API
+ * Handle quick test button clicks
  */
-async function sendChatMessage() {
-    const promptInput = document.getElementById('promptInput');
-    const outputDiv = document.getElementById('output');
-    const sendButton = document.getElementById('sendButton');
-    
-    if (!promptInput || !outputDiv) {
-        console.error('Required elements not found');
-        return;
-    }
-    
-    const prompt = promptInput.value.trim();
-    
+async function handleChatDemo(event) {
+    const button = event.target.closest('button');
+    const prompt = button.dataset.prompt;
+    const sessionId = button.dataset.sessionId || null;
+
     if (!prompt) {
-        appendOutput('Error: Please enter a prompt', 'error');
+        displayError('No prompt found for this button');
         return;
     }
-    
-    // Disable button during request
-    if (sendButton) {
-        sendButton.disabled = true;
-        sendButton.textContent = 'Sending...';
-    }
-    
-    // Show user message
-    appendOutput(`You: ${prompt}`, 'user');
-    
+
+    displayLoading('chat-output');
     try {
-        // Call the API
-        const response = await fetch(CHAT_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                prompt: prompt,
-                model: 'gpt-3.5-turbo',
-                temperature: 0.7,
-                max_tokens: 500,
-                session_id: 'demo-session'
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        // Display AI response
-        if (data.response) {
-            appendOutput(`AI: ${data.response}`, 'assistant');
-            
-            // Clear input after successful send
-            promptInput.value = '';
-        } else {
-            throw new Error('No response received from API');
-        }
-        
+        const response = await callChatAPI(prompt, sessionId);
+        displayChatResponse(response);
     } catch (error) {
-        console.error('API Error:', error);
-        appendOutput(`Error: ${error.message}`, 'error');
-    } finally {
-        // Re-enable button
-        if (sendButton) {
-            sendButton.disabled = false;
-            sendButton.textContent = 'Send';
-        }
+        displayError(`Chat API Error: ${error.message}`);
     }
 }
 
 /**
- * Append output to the output div
- * @param {string} message - The message to display
- * @param {string} type - The type of message (user, assistant, error)
+ * Handle custom chat form submission
  */
-function appendOutput(message, type = 'info') {
-    const outputDiv = document.getElementById('output');
-    
-    if (!outputDiv) {
-        console.error('Output div not found');
+async function handleCustomChat(event) {
+    event.preventDefault();
+    const promptInput = document.getElementById('custom-prompt');
+    const sessionInput = document.getElementById('custom-session-id');
+    const prompt = promptInput.value.trim();
+    const sessionId = sessionInput.value.trim() || null;
+
+    if (!prompt) {
+        displayError('Please enter a prompt');
         return;
     }
-    
-    // Create message element
-    const messageEl = document.createElement('div');
-    messageEl.className = `message message-${type}`;
-    
-    const timestamp = new Date().toLocaleTimeString();
-    messageEl.innerHTML = `
-        <div class="message-header">
-            <span class="message-type">${type.toUpperCase()}</span>
-            <span class="message-time">${timestamp}</span>
+
+    displayLoading('chat-output');
+    try {
+        const response = await callChatAPI(prompt, sessionId);
+        displayChatResponse(response);
+        promptInput.value = ''; // Clear input
+    } catch (error) {
+        displayError(`Chat API Error: ${error.message}`);
+    }
+}
+
+/**
+ * Call the /ai/chat API endpoint
+ */
+async function callChatAPI(prompt, sessionId = null) {
+    const requestBody = { prompt };
+    if (sessionId) requestBody.session_id = sessionId;
+
+    const response = await fetch(CHAT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+    }
+
+    return await response.json();
+}
+
+/**
+ * Handle upload demo button click
+ */
+async function handleUploadDemo() {
+    const fileInput = document.getElementById('file-input') || document.getElementById('file-upload');
+    const file = fileInput?.files[0];
+
+    if (!file) {
+        displayError('Please select a file to upload');
+        return;
+    }
+
+    displayLoading('upload-output');
+    try {
+        const response = await callUploadAPI(file);
+        displayUploadResponse(response);
+    } catch (error) {
+        displayError(`Upload API Error: ${error.message}`, 'upload-output');
+    }
+}
+
+/**
+ * Call the /api/resources/upload API endpoint
+ */
+async function callUploadAPI(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(UPLOAD_ENDPOINT, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+    }
+
+    return await response.json();
+}
+
+/**
+ * Display loading state
+ */
+function displayLoading(outputId) {
+    const output = document.getElementById(outputId);
+    if (!output) return;
+
+    output.innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Processing request...</p>
         </div>
-        <div class="message-content">${escapeHtml(message)}</div>
     `;
-    
-    outputDiv.appendChild(messageEl);
-    
-    // Scroll to bottom
-    outputDiv.scrollTop = outputDiv.scrollHeight;
+    output.classList.remove('error');
+    output.classList.add('loading-state');
 }
 
 /**
- * Clear the output div
+ * Display chat API response
  */
-function clearOutput() {
-    const outputDiv = document.getElementById('output');
-    
-    if (!outputDiv) {
-        console.error('Output div not found');
-        return;
-    }
-    
-    outputDiv.innerHTML = '<p class="placeholder">Messages will appear here...</p>';
+function displayChatResponse(data) {
+    const output = document.getElementById('chat-output');
+    if (!output) return;
+
+    output.classList.remove('loading-state', 'error');
+    const responseText = data.response || 'No response text';
+    const sessionId = data.session_id || 'None';
+
+    output.innerHTML = `
+        <div class="response-container">
+            <div class="response-metadata">
+                <span class="metadata-label">Session ID:</span>
+                <span class="metadata-value">${escapeHtml(sessionId)}</span>
+            </div>
+            <div class="response-text">
+                <h3>Response:</h3>
+                <div class="response-content">${escapeHtml(responseText)}</div>
+            </div>
+            <div class="response-raw">
+                <details>
+                    <summary>Raw JSON Response</summary>
+                    <pre><code>${escapeHtml(JSON.stringify(data, null, 2))}</code></pre>
+                </details>
+            </div>
+        </div>
+    `;
 }
 
 /**
- * Escape HTML to prevent XSS
- * @param {string} text - The text to escape
- * @returns {string} - The escaped HTML
+ * Display upload API response
  */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+function displayUploadResponse(data) {
+    const output = document.getElementById('upload-output');
+    if (!output) return;
 
-/**
- * TODO (issue #36): Add file upload functionality
- * This function will be implemented when /api/resources/upload is available
- */
-async function uploadFile() {
-    // Placeholder for file upload functionality
-    console.log('File upload not yet implemented - see issue #36');
-    appendOutput('File upload feature coming soon (issue #36)', 'info');
-}
-
-// Initialize when DOM is loaded
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDemo);
-} else {
-    initDemo();
-}
+    output.classList.remove('loading-state', 'error');
+    output.innerHTML = `
+        <div class="response-container">
+            <div class="response
