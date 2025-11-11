@@ -8,7 +8,6 @@ Includes:
 - OpenAI integration
 - Environment config
 """
-
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.responses import StreamingResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -25,7 +24,9 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
+# ----------------------------------------------------------------------
 # Load .env
+# ----------------------------------------------------------------------
 load_dotenv()
 
 # ----------------------------------------------------------------------
@@ -41,7 +42,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     error = """
     OPENAI_API_KEY NOT SET
-    1. Copy .env.example → .env
+    1. Copy .env.example to .env
     2. Add: OPENAI_API_KEY=sk-...
     3. Restart server
     """
@@ -49,6 +50,7 @@ if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY is required")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
+
 DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 DEFAULT_MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "1000"))
 DEFAULT_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
@@ -75,6 +77,7 @@ async def lifespan(app: FastAPI):
     logger.info("Server started")
     yield
     logger.info("Server shutting down")
+
 
 app = FastAPI(lifespan=lifespan)
 
@@ -117,16 +120,19 @@ async def root():
         "docs": "/docs"
     }
 
+
 @app.get("/playground", response_class=HTMLResponse)
 async def playground():
     path = Path(__file__).parent.parent / "pages" / "playground.html"
     return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Playground not found"
+
 
 @app.get("/demo", response_class=HTMLResponse)
 async def demo():
     """Demo page for manual testing of playground and multimodal endpoints"""
     path = Path(__file__).parent.parent / "pages" / "demo.html"
     return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Demo page not found"
+
 
 # ----------------------------------------------------------------------
 # Core AI Chat Endpoint
@@ -149,36 +155,42 @@ async def chat_endpoint(request: ChatRequest):
     messages.append({"role": "user", "content": request.prompt})
 
     if session_id:
-        conversation_history[session_id].append({
-            "role": "user",
-            "content": request.prompt,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        })
+        conversation_history[session_id].append(
+            {
+                "role": "user",
+                "content": request.prompt,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
         trim_history(session_id)
 
     try:
         if request.stream:
             return StreamingResponse(
                 stream_response(model, messages, max_tokens, temp, session_id),
-                media_type="text/event-stream"
+                media_type="text/event-stream",
             )
         else:
             resp = await asyncio.to_thread(
                 client.chat.completions.create,
-                model=model, messages=messages, max_tokens=max_tokens, temperature=temp
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temp,
             )
             content = resp.choices[0].message.content.strip()
 
             if session_id:
-                conversation_history[session_id].append({
-                    "role": "assistant",
-                    "content": content,
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                })
+                conversation_history[session_id].append(
+                    {
+                        "role": "assistant",
+                        "content": content,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
                 trim_history(session_id)
 
             return {"response": content, "session_id": session_id}
-
     except Exception as e:
         logger.error(f"OpenAI error: {e}")
         raise HTTPException(503, "AI unavailable")
@@ -189,8 +201,11 @@ async def stream_response(model, messages, max_tokens, temp, session_id):
     try:
         stream = await asyncio.to_thread(
             client.chat.completions.create,
-            model=model, messages=messages, max_tokens=max_tokens,
-            temperature=temp, stream=True
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temp,
+            stream=True,
         )
         for chunk in stream:
             if delta := chunk.choices[0].delta.content:
@@ -199,13 +214,14 @@ async def stream_response(model, messages, max_tokens, temp, session_id):
         yield "data: {\"done\": true}\n\n"
 
         if session_id:
-            conversation_history[session_id].append({
-                "role": "assistant",
-                "content": full,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            })
+            conversation_history[session_id].append(
+                {
+                    "role": "assistant",
+                    "content": full,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+            )
             trim_history(session_id)
-
     except Exception as e:
         yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
@@ -230,8 +246,8 @@ async def upload_resource(file: UploadFile = File(...)):
                 "filename": file.filename,
                 "content_type": file.content_type or "application/octet-stream",
                 "size": size,
-                "size_formatted": size_formatted
-            }
+                "size_formatted": size_formatted,
+            },
         }
     except Exception as e:
         logger.exception("Upload error: %s", e)
@@ -239,12 +255,12 @@ async def upload_resource(file: UploadFile = File(...)):
 
 
 # ----------------------------------------------------------------------
-# Optional: Health Check
+# Health Check
 # ----------------------------------------------------------------------
 @app.get("/health")
 async def health():
     return {
         "status": "healthy",
         "model": DEFAULT_MODEL,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

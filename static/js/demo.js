@@ -72,10 +72,8 @@ async function handleChatDemo(event) {
  */
 async function handleCustomChat(event) {
     event.preventDefault();
-
     const promptInput = document.getElementById('custom-prompt');
     const sessionInput = document.getElementById('custom-session-id');
-
     const prompt = promptInput.value.trim();
     const sessionId = sessionInput.value.trim() || null;
 
@@ -111,6 +109,7 @@ async function callChatAPI(prompt, sessionId = null) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `HTTP ${response.status}`);
     }
+
     return await response.json();
 }
 
@@ -151,6 +150,7 @@ async function callUploadAPI(file) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `HTTP ${response.status}`);
     }
+
     return await response.json();
 }
 
@@ -179,7 +179,6 @@ function displayChatResponse(data) {
     if (!output) return;
 
     output.classList.remove('loading-state', 'error');
-
     const responseText = data.response || 'No response text';
     const sessionId = data.session_id || 'None';
 
@@ -211,81 +210,6 @@ function displayUploadResponse(data) {
     if (!output) return;
 
     output.classList.remove('loading-state', 'error');
-
     output.innerHTML = `
         <div class="response-container">
-            <div class="response-text">
-                <h3>Upload Result:</h3>
-                <div class="response-content">
-                    ${data.message || 'File uploaded successfully'}
-                </div>
-                ${data.file_info ? `
-                    <div class="file-info">
-                        <p><strong>Filename:</strong> ${escapeHtml(data.file_info.filename)}</p>
-                        <p><strong>Size:</strong> ${formatBytes(data.file_info.size)}</p>
-                        <p><strong>Type:</strong> ${escapeHtml(data.file_info.content_type || 'N/A')}</p>
-                    </div>
-                ` : ''}
-            </div>
-            <div class="response-raw">
-                <details>
-                    <summary>Raw JSON Response</summary>
-                    <pre><code>${escapeHtml(JSON.stringify(data, null, 2))}</code></pre>
-                </details>
-            </div>
-        </div>
-    `;
-}
-
-/**
- * Display error message
- */
-function displayError(message, outputId = 'chat-output') {
-    const output = document.getElementById(outputId);
-    if (!output) return;
-
-    output.classList.remove('loading-state');
-    output.classList.add('error');
-
-    output.innerHTML = `
-        <div class="error-container">
-            <h3>Error</h3>
-            <p>${escapeHtml(message)}</p>
-        </div>
-    `;
-}
-
-/**
- * Handle file selection (preview)
- */
-function handleFileSelect(event) {
-    const fileInput = event.target;
-    const file = fileInput.files[0];
-    const fileInfo = document.getElementById('file-info');
-
-    if (file && fileInfo) {
-        fileInfo.textContent = `Selected: ${file.name} (${formatBytes(file.size)})`;
-    } else if (fileInfo) {
-        fileInfo.textContent = 'No file selected';
-    }
-}
-
-/**
- * Format bytes to human-readable size
- */
-function formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-}
-
-/**
- * Escape HTML to prevent XSS
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+            <div class="response

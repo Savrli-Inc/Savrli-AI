@@ -1,86 +1,53 @@
 # Savrli AI Demo Page
 
+A minimal demo page and test harness for manual testing of Savrli AI endpoints.
+
 ## Overview
-The **Savrli AI Demo Page** is an interactive test harness for manually testing the **chat and file upload endpoints**. It offers a clean, developer-friendly UI to verify API behavior without writing code.
+The demo page provides a simple, lightweight interface for testing the AI chat functionality without the full complexity of the main playground. It's designed for quick manual testing and verification of API endpoints.
 
-Perfect for:
-- Quick API validation
-- Demoing features to stakeholders
-- Debugging integrations
+**Reference:** Issue #36
 
----
-
-## Access
-| Environment | URL |
-|-----------|-----|
-| **Local** | `http://localhost:8000/demo` |
-| **Production** | `https://your-domain.vercel.app/demo` |
-
----
+## Files
+- **`pages/demo.html`** – Minimal HTML demo page with sample prompts
+- **`static/js/demo.js`** – JavaScript for API integration and UI interactions
+- **`tests/test_demo_endpoints.py`** – Basic test suite for demo endpoints
 
 ## Features
+### Current Features
+- **Chat Interface**
+  - Simple text input for prompts
+  - Sample prompt buttons for quick testing
+  - Real-time message display
+  - Session management (`demo-session`)
+- **Sample Prompts**
+  - Quantum computing explanation
+  - Python code example
+  - REST API explanation
+  - Productivity tips
+- **Response Display**
+  - Timestamped messages
+  - Color-coded message types (user, assistant, error)
+  - Auto-scrolling output
+  - Clear output functionality
 
-### 1. **Chat API Demo** (`POST /ai/chat`)
-- **Quick Test Buttons** – One-click prompts:
-  - Geography Question
-  - Science Explanation
-  - Creative Writing
-  - Health Question
-  - Recipe Request
-  - Fun Fact
-- **Custom Prompt Form** – Full control:
-  - Free-text input
-  - Optional `session_id` for conversation continuity
+### Planned Features (TODO – Issue #36)
+- **File Upload Support**
+  - Endpoint: `/api/resources/upload`
+  - File selection UI
+  - Upload progress indicator
+  - File validation
+- **Enhanced UI**
+  - Better styling and responsive design
+  - Dark mode support
+  - Markdown rendering for responses
+  - Syntax highlighting for code
+- **Additional Test Coverage**
+  - Integration tests for `demo.js`
+  - Screenshot testing
+  - File upload endpoint tests
 
-**Response Display**:
-- Real-time loading spinner
-- Formatted AI response
-- Raw JSON toggle
-- Session ID metadata
-
----
-
-### 2. **Resource Upload Demo** (`POST /api/resources/upload`)
-- File picker (any type: images, audio, PDF, JSON, text)
-- Live preview of:
-  - Filename
-  - Content type
-  - File size (human-readable)
-- Upload progress indicator
-- Success/error feedback
-- Raw JSON response
-
----
-
-## Manual Testing Guide
-
-### Test Chat Functionality
-1. Open `/demo`
-2. **Quick Test**:
-   - Click **"Geography Question"**
-   - Wait for loading spinner
-   - Verify response contains **"Paris, France"**
-3. **Custom Test**:
-   - Enter: `Explain quantum entanglement in simple terms`
-   - Set `session_id: user-123`
-   - Click **Send**
-   - Follow-up: `What did I just ask?` → should recall
-
-### Test File Upload
-1. Scroll to **"Resource Upload Demo"**
-2. Choose a file:
-   - `test.jpg` (image)
-   - `recipe.json`
-   - `voice.mp3`
-3. Click **Upload File**
-4. Verify response includes:
-   ```json
-   {
-     "success": true,
-     "file_info": {
-       "filename": "test.jpg",
-       "content_type": "image/jpeg",
-       "size": 245760,
-       "size_formatted": "240.00 KB"
-     }
-   }
+## Usage
+### Accessing the Demo Page
+1. Start the Savrli AI server:
+   ```bash
+   uvicorn api.index:app --reload

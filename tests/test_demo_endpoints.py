@@ -6,7 +6,6 @@ This module contains comprehensive tests to verify that:
 - Chat and upload endpoints work
 - Integration with frontend is correct
 """
-
 import pytest
 import io
 import sys
@@ -21,6 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 os.environ['OPENAI_API_KEY'] = 'test-key-12345'
 
 from api.index import app  # noqa: E402
+
 client = TestClient(app)
 
 
@@ -48,14 +48,14 @@ class TestDemoPageEndpoint:
         """Test that demo page contains chat API demo section"""
         response = client.get("/demo")
         content = response.text
-        assert "Chat API Demo" in content or "💬" in content
+        assert "Chat API Demo" in content or "Chat" in content
         assert "chat-output" in content
 
     def test_demo_page_contains_upload_section(self):
         """Test that demo page contains upload demo section"""
         response = client.get("/demo")
         content = response.text
-        assert "Upload" in content or "📁" in content
+        assert "Upload" in content or "File" in content
         assert "upload-output" in content
 
     def test_demo_page_includes_demo_js(self):
@@ -117,7 +117,6 @@ class TestResourceUploadEndpoint:
         )
         assert response.status_code == 200
         data = response.json()
-
         assert data["success"] is True
         file_info = data["file_info"]
         assert file_info["filename"] == "demo_test.txt"
@@ -131,7 +130,6 @@ class TestResourceUploadEndpoint:
             ("data.json", b'{"key": "value"}', "application/json"),
             ("binary.bin", b"\x00\x01", "application/octet-stream"),
         ]
-
         for filename, content, ctype in file_types:
             test_file = io.BytesIO(content)
             response = client.post(
@@ -188,15 +186,16 @@ class TestDemoEndpointsWithMocks:
     @patch('api.index.client.chat.completions.create')
     def test_chat_endpoint_with_sample_prompts(self, mock_create):
         """Test multiple demo prompts"""
-        mock_create.return_value.choices = [MagicMock()]
-        mock_create.return_value.choices[0].message.content = "Test response"
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Test response"
+        mock_create.return_value = mock_response
 
         prompts = [
             "What is the capital of France?",
             "Explain quantum computing",
             "Write a haiku about coding",
         ]
-
         for prompt in prompts:
             response = client.post("/ai/chat", json={"prompt": prompt})
             assert response.status_code == 200
