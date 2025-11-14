@@ -60,8 +60,8 @@ Look for issues labeled **["First Issue"](https://github.com/Savrli-Inc/Savrli-A
 
 ### Before You Start
 
-1. **Read the onboarding guide**: [docs/ONBOARDING_GUIDE.md](docs/ONBOARDING_GUIDE.md)
-2. **Set up your environment**: Run `python3 setup.py` for automated setup
+1. **Read the onboarding guide**: [docs/ONBOARDING.md](docs/ONBOARDING.md)
+2. **Set up your environment**: Run `./scripts/setup.sh` for automated setup
 3. **Explore the playground**: Visit `http://localhost:8000/playground` to understand the app
 4. **Read existing code**: Spend time understanding the patterns used
 5. **Run the tests**: Make sure everything works before making changes
@@ -89,22 +89,22 @@ Look for issues labeled **["First Issue"](https://github.com/Savrli-Inc/Savrli-A
 
 ### Automated Setup (Recommended for Beginners)
 
-Use our automated setup scripts to streamline the process:
+Use our automated setup script to streamline the process:
 
 ```bash
-# Option 1: Python script (Recommended)
-python3 setup.py
-
-# Option 2: Bash script (Unix/Linux/macOS)
-./setup.sh
+# Interactive bash script (Recommended)
+./scripts/setup.sh
 ```
 
-These scripts will:
+This script will:
 - ✅ Check your Python version
+- ✅ Optionally create a virtual environment
 - ✅ Install all dependencies
-- ✅ Create environment file template
+- ✅ Help you configure environment variables interactively
 - ✅ Run basic health checks
 - ✅ Guide you through next steps
+
+**For detailed setup instructions and troubleshooting, see [docs/ONBOARDING.md](docs/ONBOARDING.md)**
 
 ### Manual Setup
 
