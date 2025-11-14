@@ -17,7 +17,7 @@ import os
 import asyncio
 import logging
 import json
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from datetime import datetime, timezone
 from collections import defaultdict
 from pathlib import Path
@@ -28,6 +28,9 @@ from dotenv import load_dotenv
 # Load .env
 # ----------------------------------------------------------------------
 load_dotenv()
+
+# Import resources router
+from .resources import router as resources_router
 
 # ----------------------------------------------------------------------
 # Logging
@@ -81,17 +84,23 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Serve static files (CSS, JS, images)
+# ----------------------------------------------------------------------
+# Static files & Routers
+# ----------------------------------------------------------------------
 static_path = Path(__file__).parent.parent / "static"
 if static_path.exists():
     app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
+# Resources router (for /api/resources/* etc.)
+app.include_router(resources_router)
+
 # ----------------------------------------------------------------------
-# Helper: Trim old messages
+# Helpers
 # ----------------------------------------------------------------------
 def trim_history(session_id: str):
     if len(conversation_history[session_id]) > MAX_HISTORY_PER_SESSION:
         conversation_history[session_id] = conversation_history[session_id][-MAX_HISTORY_PER_SESSION:]
+
 
 # ----------------------------------------------------------------------
 # Pydantic Models
@@ -104,8 +113,9 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     stream: Optional[bool] = False
 
+
 # ----------------------------------------------------------------------
-# Routes
+# Routes – Root & Pages
 # ----------------------------------------------------------------------
 @app.get("/")
 async def root():
@@ -115,9 +125,11 @@ async def root():
             "playground": "/playground",
             "demo": "/demo",
             "chat": "POST /ai/chat",
-            "upload": "POST /api/resources/upload"
+            "upload": "POST /api/resources/upload",
+            "resources_page": "/resources",
+            "health": "/health",
         },
-        "docs": "/docs"
+        "docs": "/docs",
     }
 
 
@@ -132,6 +144,13 @@ async def demo():
     """Demo page for manual testing of playground and multimodal endpoints"""
     path = Path(__file__).parent.parent / "pages" / "demo.html"
     return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Demo page not found"
+
+
+@app.get("/resources", response_class=HTMLResponse)
+async def resources_page():
+    """Static page listing uploaded / managed resources (front-end demo)."""
+    path = Path(__file__).parent.parent / "pages" / "resources.html"
+    return HTMLResponse(path.read_text(encoding="utf-8")) if path.exists() else "Resources page not found"
 
 
 # ----------------------------------------------------------------------
@@ -264,3 +283,4 @@ async def health():
         "model": DEFAULT_MODEL,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+

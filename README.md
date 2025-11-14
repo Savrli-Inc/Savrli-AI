@@ -523,3 +523,87 @@ async def dashboard():
 # ----------------------------------------------------------------------
 # (All other endpoints – AI tools, integrations, export/import – are identical to the main branch)
 # ----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# Resource & Content Management
+# ----------------------------------------------------------------------
+
+## Overview
+
+The Resource & Content Management feature provides a file-based system for uploading, storing, importing, and exporting resources such as files, conversations, and other content.
+
+## Endpoints
+
+### List Resources
+- **GET** `/api/resources/list`
+- Returns a list of all stored resources with metadata
+
+### Upload File
+- **POST** `/api/resources/upload`
+- Upload a file to be stored in the resource system
+- Form data: `file` (multipart/form-data)
+- Returns metadata including unique resource ID
+
+### Import JSON
+- **POST** `/api/resources/import`
+- Import resources from a JSON file
+- Form data: `file` (multipart/form-data)
+- Accepts JSON array of resource metadata objects
+- Returns count of imported items
+
+### Export Index
+- **GET** `/api/resources/export`
+- Downloads the resource index as a JSON file
+- Returns: `resources-index.json`
+
+### Download Resource
+- **GET** `/api/resources/download/{resource_id}`
+- Download a specific resource by ID
+- Returns the file with appropriate content type
+
+## UI
+
+Access the Resource Manager UI at `/resources` to:
+- Upload files through a web interface
+- Import JSON metadata files
+- Export the resource index
+- View and download stored resources
+
+## Storage
+
+Resources are stored in the `data/resources/` directory by default. This can be configured using the `RESOURCE_DATA_DIR` environment variable.
+
+Resource metadata is maintained in `data/resources/index.json`.
+
+**Note:** The `data/` directory is excluded from version control via `.gitignore`.
+
+## Example Usage
+
+### Upload a file via API
+```bash
+curl -X POST http://localhost:8000/api/resources/upload \
+  -F "file=@myfile.txt"
+```
+
+### List all resources
+```bash
+curl http://localhost:8000/api/resources/list
+```
+
+### Export resource index
+```bash
+curl http://localhost:8000/api/resources/export \
+  -o resources-backup.json
+```
+
+### Import resources
+```bash
+curl -X POST http://localhost:8000/api/resources/import \
+  -F "file=@resources-backup.json"
+```
+
+## Testing
+
+Run resource management tests:
+```bash
+pytest tests/test_resources.py -v
+```
