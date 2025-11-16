@@ -1,0 +1,30 @@
+name: Multimodal Feature Check
+on: [pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      RUN_INTEGRATION: "false"  # keep external network/integration tests off by default
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          else
+            echo "requirements-dev.txt not found, installing pytest"
+            pip install pytest
+          fi
+          [ -f requirements.txt ] && pip install -r requirements.txt || true
+
+      - name: Run tests
+        run: pytest -q
