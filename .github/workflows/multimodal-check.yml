@@ -1,0 +1,172 @@
+name: Multimodal Feature Tests
+
+# This workflow runs tests and linting for the multimodal AI features
+# Related to issues #32 and #36
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/multimodal*'
+      - 'copilot/*multimodal*'
+    paths:
+      - 'ai_multimodal.py'
+      - 'api/index.py'
+      - 'tests/test_multimodal.py'
+      - 'requirements.txt'
+      - '.github/workflows/multimodal-check.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'ai_multimodal.py'
+      - 'api/index.py'
+      - 'tests/test_multimodal.py'
+      - 'requirements.txt'
+
+# Limit permissions for security (CodeQL recommendation)
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Run Multimodal Tests
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+    
+    # TODO: Consider adding a build matrix to test on multiple Python versions
+    # strategy:
+    #   matrix:
+    #     python-version: ['3.9', '3.10', '3.11']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'  # Cache pip dependencies for faster builds
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # TODO: Consider adding test-specific dependencies in requirements-test.txt
+          # pip install -r requirements-test.txt
+      
+      - name: Run multimodal tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_TEST }}
+        run: |
+          # Run only multimodal tests with verbose output
+          pytest tests/test_multimodal.py -v --tb=short
+          
+          # TODO: Add coverage reporting
+          # pytest tests/test_multimodal.py -v --cov=ai_multimodal --cov=api --cov-report=xml --cov-report=term
+      
+      # TODO: Add coverage upload to Codecov or similar service
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     file: ./coverage.xml
+      #     flags: multimodal
+      #     name: multimodal-coverage
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: .pytest_cache/
+          retention-days: 7
+
+  lint:
+    name: Lint Multimodal Code
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install linting dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # TODO: Add these to requirements-dev.txt for better dependency management
+          pip install flake8 black isort mypy
+      
+      - name: Check code formatting with Black
+        run: |
+          # Check if code is formatted according to Black style
+          black --check ai_multimodal.py api/index.py tests/test_multimodal.py
+          # TODO: Add .black.toml or pyproject.toml for Black configuration
+      
+      - name: Check import sorting with isort
+        run: |
+          # Check if imports are sorted correctly
+          isort --check-only ai_multimodal.py api/index.py tests/test_multimodal.py
+          # TODO: Add isort configuration in pyproject.toml
+      
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 ai_multimodal.py api/index.py tests/test_multimodal.py --count --select=E9,F63,F7,F82 --show-source --statistics
+          
+          # Exit-zero treats all errors as warnings
+          # TODO: Reduce max-line-length to 88 (Black default) or 100
+          flake8 ai_multimodal.py api/index.py tests/test_multimodal.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      
+      # TODO: Add type checking with mypy
+      # - name: Type check with mypy
+      #   run: |
+      #     mypy ai_multimodal.py api/index.py --ignore-missing-imports
+      
+      # TODO: Add security scanning
+      # - name: Security check with bandit
+      #   run: |
+      #     pip install bandit
+      #     bandit -r ai_multimodal.py api/index.py
+
+  # TODO: Add integration test job that runs against a real OpenAI API (staging)
+  # integration-test:
+  #   name: Integration Tests
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
+  #     - run: pip install -r requirements.txt
+  #     - name: Run integration tests
+  #       env:
+  #         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_STAGING }}
+  #       run: pytest tests/test_multimodal_integration.py -v
+
+  # TODO: Add performance/load test job
+  # performance-test:
+  #   name: Performance Tests
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
+  #     - run: pip install -r requirements.txt locust
+  #     - name: Run performance tests
+  #       run: locust -f tests/locustfile.py --headless -u 10 -r 2 -t 30s
