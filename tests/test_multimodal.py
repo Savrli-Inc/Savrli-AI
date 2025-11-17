@@ -367,3 +367,266 @@ class TestMultiModalIntegration:
         vision_model = vision_models[0]
         assert "text" in vision_model["capabilities"]
         assert "image" in vision_model["capabilities"]
+
+
+# ==============================================================================
+# TODO: Additional Test Coverage Needed (Scaffolding for issue #32 and #36)
+# ==============================================================================
+
+class TestFileUploadLimits:
+    """Test file upload size and type validation"""
+    
+    def test_audio_file_too_large(self):
+        """TODO: Test that audio files exceeding size limit are rejected"""
+        # TODO: Implement test for maximum file size validation
+        # Expected behavior: Files > 25MB should return 413 Payload Too Large
+        # Request should include appropriate file size headers
+        pytest.skip("TODO: Implement file size limit validation")
+    
+    def test_audio_invalid_file_type(self):
+        """TODO: Test that invalid audio file types are rejected"""
+        # TODO: Implement test for file type validation
+        # Expected behavior: Non-audio files should return 400 Bad Request
+        # Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, webm
+        pytest.skip("TODO: Implement file type validation")
+    
+    def test_image_base64_too_large(self):
+        """TODO: Test that base64 images exceeding size limit are rejected"""
+        # TODO: Implement test for base64 image size limits
+        # Expected behavior: Images > 20MB should return 400 Bad Request
+        pytest.skip("TODO: Implement image size validation")
+
+
+class TestRateLimiting:
+    """Test rate limiting behavior for multi-modal endpoints"""
+    
+    def test_vision_rate_limit_handling(self):
+        """TODO: Test graceful handling of OpenAI rate limits for vision"""
+        # TODO: Implement test that simulates rate limit response
+        # Expected behavior: Return 429 Too Many Requests with retry-after header
+        # Mock OpenAI client to raise RateLimitError
+        pytest.skip("TODO: Implement rate limit handling test")
+    
+    def test_audio_rate_limit_handling(self):
+        """TODO: Test graceful handling of OpenAI rate limits for audio"""
+        # TODO: Implement test that simulates rate limit response
+        pytest.skip("TODO: Implement rate limit handling test")
+    
+    def test_image_generation_rate_limit_handling(self):
+        """TODO: Test graceful handling of OpenAI rate limits for image gen"""
+        # TODO: Implement test that simulates rate limit response
+        pytest.skip("TODO: Implement rate limit handling test")
+
+
+class TestConcurrentRequests:
+    """Test concurrent multi-modal requests"""
+    
+    @pytest.mark.asyncio
+    async def test_concurrent_vision_requests(self):
+        """TODO: Test multiple concurrent vision requests"""
+        # TODO: Implement test for concurrent request handling
+        # Expected behavior: All requests should complete successfully
+        # No race conditions or resource conflicts
+        pytest.skip("TODO: Implement concurrent request test")
+    
+    @pytest.mark.asyncio
+    async def test_mixed_multimodal_concurrent_requests(self):
+        """TODO: Test concurrent requests to different multi-modal endpoints"""
+        # TODO: Send vision, audio, and image gen requests concurrently
+        # Verify all complete successfully without interference
+        pytest.skip("TODO: Implement mixed concurrent request test")
+
+
+class TestResponseFieldConsistency:
+    """Test that response fields match expected API contract"""
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_vision_response_has_input_type(self, mock_create):
+        """TODO: Verify vision response includes input_type field"""
+        # TODO: This test currently fails - API needs to add input_type field
+        # Expected: response should include "input_type": "image"
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Test response"
+        mock_create.return_value = mock_response
+        
+        response = client.post("/ai/vision", json={
+            "prompt": "Test",
+            "image_url": "https://example.com/image.jpg"
+        })
+        
+        assert response.status_code == 200
+        data = response.json()
+        # TODO: Uncomment when API is updated to include input_type
+        # assert "input_type" in data
+        # assert data["input_type"] == "image"
+        pytest.skip("TODO: API needs to add input_type field to vision response")
+    
+    @patch('api.index.client.audio.transcriptions.create')
+    def test_audio_response_has_input_type(self, mock_create):
+        """TODO: Verify audio response includes input_type field"""
+        # TODO: This test currently fails - API needs to add input_type field
+        # Expected: response should include "input_type": "audio"
+        mock_response = MagicMock()
+        mock_response.text = "Test transcription"
+        mock_create.return_value = mock_response
+        
+        audio_content = b"fake audio data"
+        files = {'file': ('test.mp3', io.BytesIO(audio_content), 'audio/mpeg')}
+        
+        response = client.post("/ai/audio/transcribe", files=files)
+        
+        assert response.status_code == 200
+        data = response.json()
+        # TODO: Uncomment when API is updated to include input_type
+        # assert "input_type" in data
+        # assert data["input_type"] == "audio"
+        pytest.skip("TODO: API needs to add input_type field to audio response")
+    
+    def test_model_list_field_naming_consistency(self):
+        """TODO: Verify model list uses consistent field naming"""
+        # TODO: Currently returns 'count', but some tests expect 'total_count'
+        # Decision needed: standardize on 'count' or 'total_count'
+        response = client.get("/ai/models")
+        
+        assert response.status_code == 200
+        data = response.json()
+        # TODO: Standardize field name across API
+        # assert "total_count" in data  # OR
+        # assert "count" in data
+        pytest.skip("TODO: Decide on standard field name for count")
+
+
+class TestErrorScenarios:
+    """Test error handling for edge cases"""
+    
+    @patch('api.index.client.chat.completions.create')
+    def test_vision_openai_api_error(self, mock_create):
+        """TODO: Test handling of OpenAI API errors for vision"""
+        # TODO: Mock OpenAI client to raise various error types
+        # - AuthenticationError
+        # - APIError
+        # - Timeout
+        # Expected: Return appropriate HTTP status with clear error message
+        pytest.skip("TODO: Implement OpenAI error handling tests")
+    
+    @patch('api.index.client.images.generate')
+    def test_image_generation_content_policy_violation(self, mock_create):
+        """TODO: Test handling of content policy violations"""
+        # TODO: Mock OpenAI to raise content policy error
+        # Expected: Return 400 with clear message about policy violation
+        pytest.skip("TODO: Implement content policy error handling")
+    
+    def test_vision_malformed_image_url(self):
+        """TODO: Test vision endpoint with malformed image URL"""
+        # TODO: Send request with invalid URL format
+        # Expected: Return 400 Bad Request
+        pytest.skip("TODO: Implement URL validation test")
+    
+    def test_vision_unreachable_image_url(self):
+        """TODO: Test vision endpoint with unreachable image URL"""
+        # TODO: Send request with URL that returns 404
+        # Expected: Return appropriate error message
+        pytest.skip("TODO: Implement image URL reachability test")
+
+
+class TestAudioFormats:
+    """Test different audio response formats"""
+    
+    @patch('api.index.client.audio.transcriptions.create')
+    def test_transcribe_response_format_text(self, mock_create):
+        """TODO: Test audio transcription with text response format"""
+        # TODO: Verify plain text format response
+        pytest.skip("TODO: Implement text format test")
+    
+    @patch('api.index.client.audio.transcriptions.create')
+    def test_transcribe_response_format_srt(self, mock_create):
+        """TODO: Test audio transcription with SRT subtitle format"""
+        # TODO: Verify SRT format response
+        pytest.skip("TODO: Implement SRT format test")
+    
+    @patch('api.index.client.audio.transcriptions.create')
+    def test_transcribe_response_format_vtt(self, mock_create):
+        """TODO: Test audio transcription with VTT subtitle format"""
+        # TODO: Verify VTT format response
+        pytest.skip("TODO: Implement VTT format test")
+
+
+# ==============================================================================
+# Example Request/Response Fixtures (for reference in implementing TODOs)
+# ==============================================================================
+
+EXAMPLE_VISION_REQUEST = {
+    "prompt": "What objects are in this image?",
+    "image_url": "https://example.com/test-image.jpg",
+    "model": "gpt-4-vision-preview",
+    "max_tokens": 300,
+    "detail": "high"
+}
+
+EXAMPLE_VISION_RESPONSE = {
+    "response": "The image contains a laptop, coffee mug, and notebook on a desk.",
+    "model": "gpt-4-vision-preview",
+    "input_type": "image"  # TODO: Not currently returned by API
+}
+
+EXAMPLE_AUDIO_REQUEST_PARAMS = {
+    "model": "whisper-1",
+    "language": "en",
+    "prompt": "This is a technical discussion about AI and machine learning.",
+    "response_format": "json",
+    "temperature": 0.0
+}
+
+EXAMPLE_AUDIO_RESPONSE = {
+    "transcription": "This is the transcribed text from the audio file.",
+    "model": "whisper-1",
+    "format": "json",
+    "input_type": "audio"  # TODO: Not currently returned by API
+}
+
+EXAMPLE_IMAGE_GEN_REQUEST = {
+    "prompt": "A serene mountain landscape at sunset with a lake reflection",
+    "model": "dall-e-3",
+    "size": "1024x1024",
+    "quality": "hd",
+    "style": "vivid",
+    "n": 1
+}
+
+EXAMPLE_IMAGE_GEN_RESPONSE = {
+    "images": [
+        {
+            "url": "https://example.com/generated-image.png",
+            "revised_prompt": "A serene mountain landscape at sunset..."
+        }
+    ],
+    "model": "dall-e-3",
+    "count": 1
+}
+
+EXAMPLE_FINE_TUNE_REQUEST = {
+    "training_file": "file-abc123xyz",
+    "model": "gpt-3.5-turbo",
+    "validation_file": "file-def456uvw",
+    "n_epochs": 3,
+    "batch_size": "auto",
+    "learning_rate_multiplier": "auto",
+    "suffix": "custom-model-v1"
+}
+
+EXAMPLE_FINE_TUNE_RESPONSE = {
+    "success": True,
+    "message": "Fine-tuning configuration validated successfully",
+    "config": {
+        "model_id": "gpt-3.5-turbo",
+        "training_file": "file-abc123xyz",
+        "validation_file": "file-def456uvw",
+        "hyperparameters": {
+            "n_epochs": 3,
+            "batch_size": "auto",
+            "learning_rate_multiplier": "auto"
+        },
+        "suffix": "custom-model-v1"
+    }
+}

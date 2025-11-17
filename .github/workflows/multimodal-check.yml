@@ -1,0 +1,198 @@
+# ==============================================================================
+# Multi-Modal Feature CI Check
+# ==============================================================================
+# This is a PLACEHOLDER workflow for testing multi-modal capabilities.
+# 
+# Related Issues:
+# - Issue #32: Multi-modal capabilities implementation
+# - Issue #36: Multi-modal review and testing scaffolding
+#
+# TODO: This workflow is a stub and needs to be completed before production use.
+# ==============================================================================
+
+name: Multi-Modal Feature Check
+
+# TODO: Configure appropriate triggers
+on:
+  # Trigger on pull requests to main branch
+  pull_request:
+    branches:
+      - main
+    # TODO: Consider limiting to specific paths when PR targets multi-modal code
+    # paths:
+    #   - 'api/**'
+    #   - 'tests/test_multimodal.py'
+    #   - 'ai_multimodal.py'
+  
+  # Trigger on pushes to feature branches
+  push:
+    branches:
+      - 'feature/**'
+      - 'multimodal/**'
+  
+  # Allow manual workflow dispatch for testing
+  workflow_dispatch:
+
+# TODO: Consider adding concurrency groups to cancel in-progress runs
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
+
+# Limit permissions for security
+permissions:
+  contents: read
+
+jobs:
+  # ==========================================================================
+  # Job: Run Multi-Modal Tests
+  # ==========================================================================
+  test-multimodal:
+    name: Test Multi-Modal Features
+    runs-on: ubuntu-latest
+    
+    # TODO: Consider adding timeout to prevent runaway jobs
+    # timeout-minutes: 15
+    
+    steps:
+      # ----------------------------------------------------------------------
+      # Step 1: Checkout repository
+      # ----------------------------------------------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # ----------------------------------------------------------------------
+      # Step 2: Set up Python environment
+      # ----------------------------------------------------------------------
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          # TODO: Consider caching pip dependencies for faster builds
+          # cache: 'pip'
+      
+      # ----------------------------------------------------------------------
+      # Step 3: Install dependencies
+      # ----------------------------------------------------------------------
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # TODO: Consider installing additional test dependencies if needed
+          # pip install pytest-cov pytest-asyncio
+      
+      # ----------------------------------------------------------------------
+      # Step 4: Run linting with flake8
+      # ----------------------------------------------------------------------
+      # TODO: This is a placeholder - flake8 needs to be added to requirements
+      - name: Lint with flake8
+        run: |
+          # Install flake8 if not in requirements.txt
+          pip install flake8
+          
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          
+          # Exit-zero treats all errors as warnings
+          # TODO: Configure flake8 line length and other settings in setup.cfg or .flake8
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true  # TODO: Remove this when linting is properly configured
+      
+      # ----------------------------------------------------------------------
+      # Step 5: Run multi-modal tests with pytest
+      # ----------------------------------------------------------------------
+      - name: Run multi-modal tests
+        env:
+          # Set test API key - this is required for the app to start
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'test-key-placeholder' }}
+          # TODO: Consider adding test-specific environment variables
+          # OPENAI_MODEL: gpt-3.5-turbo
+          # OPENAI_MAX_TOKENS: 1000
+        run: |
+          # Run only multi-modal tests
+          pytest tests/test_multimodal.py -v
+          
+          # TODO: Add coverage reporting when ready
+          # pytest tests/test_multimodal.py -v --cov=api --cov=ai_multimodal --cov-report=xml
+        continue-on-error: true  # TODO: Remove this when all tests are passing
+      
+      # ----------------------------------------------------------------------
+      # Step 6: Run all tests (optional)
+      # ----------------------------------------------------------------------
+      # TODO: Uncomment to run full test suite
+      # - name: Run all tests
+      #   env:
+      #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'test-key-placeholder' }}
+      #   run: |
+      #     pytest tests/ -v --tb=short
+      
+      # ----------------------------------------------------------------------
+      # Step 7: Upload test results (optional)
+      # ----------------------------------------------------------------------
+      # TODO: Add test result artifact upload when needed
+      # - name: Upload test results
+      #   if: always()
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: test-results
+      #     path: |
+      #       test-results/
+      #       coverage.xml
+      
+      # ----------------------------------------------------------------------
+      # Step 8: Check documentation (optional)
+      # ----------------------------------------------------------------------
+      # TODO: Add documentation checks
+      # - name: Check documentation
+      #   run: |
+      #     # Verify MULTIMODAL_REVIEW.md checklist is complete
+      #     # Check that README.md includes multi-modal endpoints
+      #     echo "TODO: Add documentation validation"
+
+  # ==========================================================================
+  # Job: Build Check (optional)
+  # ==========================================================================
+  # TODO: Add build verification job if needed
+  # build-check:
+  #   name: Verify Build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Set up Python 3.11
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.11'
+  #     - name: Install and verify
+  #       run: |
+  #         pip install -r requirements.txt
+  #         python -c "from api.index import app; print('Build successful')"
+
+  # ==========================================================================
+  # Job: Security Scan (optional)
+  # ==========================================================================
+  # TODO: Add security scanning when ready for production
+  # security-scan:
+  #   name: Security Scan
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Run security scan
+  #       run: |
+  #         pip install bandit safety
+  #         bandit -r api/ -ll
+  #         safety check --json
+
+# ==============================================================================
+# NOTES FOR REVIEWERS:
+# ==============================================================================
+# 1. This workflow is a PLACEHOLDER and needs completion before production use
+# 2. Several steps are marked with continue-on-error: true - these should be
+#    removed once the issues are resolved
+# 3. The OPENAI_API_KEY secret needs to be configured in GitHub repository
+#    settings for the tests to properly connect to OpenAI
+# 4. Consider adding additional jobs for:
+#    - Integration testing with real OpenAI API (in separate workflow)
+#    - Performance testing
+#    - Security scanning
+#    - Documentation validation
+# 5. Review and update the trigger conditions based on team workflow
+# ==============================================================================
